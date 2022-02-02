@@ -1,0 +1,16 @@
+---
+###############################################################################
+# PYTHON APPLICATION PIPELINE
+###############################################################################
+
+include:
+  - project: 'inuits/gitlab-ci/pipeline-templates'
+    file: 'python-pipeline.yml'
+    ref: 'v1.3.0'
+
+variables:
+  CUSTOMER: 'inuits'
+  APPLICATION: 'dams-base-transcoder'
+  TERRAFORM_IMAGE: 'dams-terraform'
+  TERRAFORM_TAG: 'latest'
+  SKIP_DEPLOY: 'true'
