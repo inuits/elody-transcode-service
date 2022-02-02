@@ -1,0 +1,26 @@
+asyncapi: '2.1.0'
+info:
+  title: DAMS Collection API
+  version: 0.0.1
+  description: This service is in charge of managing events in the DAMS collection API
+channels:
+  importer/start:
+    subscribe:
+      message:
+        $ref: '#/components/messages/Upload'
+components:
+  messages:
+    Upload:
+      payload:
+        type: object
+        properties:
+          message_id:
+            type: string
+            format: uuid
+            description: Id of the message
+          data:
+            type: object
+            properties:
+              upload_folder:
+                type: string
+                description: Folder to import files from

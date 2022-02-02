@@ -1,0 +1,134 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "DAMS csv importer API",
+    "description": "An API for interactings with the DAMS csv importer",
+    "contact": {
+      "email": "gverm@inuits.eu"
+    },
+    "version": "0.0.1"
+  },
+  "externalDocs": {
+    "description": "Find out more about DAMS",
+    "url": "https://docs.inuits.io/dams/csv-importer"
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "importer",
+      "description": "Importer module in DAMS"
+    }
+  ],
+  "paths": {
+    "/importer/start": {
+      "post": {
+        "tags": [
+          "importer"
+        ],
+        "summary": "Start import job",
+        "operationId": "startImport",
+        "requestBody": {
+          "description": "Folder in source location to import from",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "upload_folder": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/message"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/importer/directories": {
+      "get": {
+        "tags": [
+          "importer"
+        ],
+        "summary": "List of possible directories in source location to import from",
+        "operationId": "importDirectoryList",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "dir": {
+                        "type": "string"
+                      },
+                      "has_subdirs": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "message": {
+        "type": "object",
+        "description": "RabbitMQ message",
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "upload_source": {
+                "type": "string",
+                "description": "source location to import from"
+              },
+              "upload_folder": {
+                "type": "string",
+                "description": "folder in source location to import from"
+              },
+              "collection_api_url": {
+                "type": "string",
+                "format": "uri",
+                "description": "url of running collection-api instance"
+              },
+              "storage_api_url": {
+                "type": "string",
+                "format": "uri",
+                "description": "url of running storage-api instance"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
