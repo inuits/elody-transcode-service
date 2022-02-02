@@ -8,6 +8,7 @@ from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
 from job_helper.job_helper import JobHelper
+from transcoder import Transcoder
 
 
 SWAGGER_URL = "/api/docs"  # URL for exposing Swagger UI (without trailing '/')
@@ -39,10 +40,12 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+"""
 job_helper = JobHelper(
     job_api_base_url=os.getenv("JOB_API_BASE_URL", "http://collection-api:8000"),
     static_jwt=os.getenv("STATIC_JWT", False),
 )
+"""
 
 ramq = RabbitMQ()
 ramq.init_app(app=app)
@@ -50,7 +53,24 @@ ramq.init_app(app=app)
 
 @ramq.queue(exchange_name="dams", routing_key="dams.file_uploaded")
 def start_file_transcode(body):
-    pass
+    accepted_mimetypes = ["image/jpeg", "image/tiff", "image/bmp", "image/gif"]
+    body_dict = json.loads(body)
+    if "mimetype" not in body_dict or "file_location" not in body_dict:
+        return True
+    if body_dict["mimetype"] not in accepted_mimetypes:
+        return True
+    # job = job_helper.create_new_job("Import csv", "import csv")
+    # job = job_helper.progress_job(job)
+    try:
+
+        file_location = body_dict["data"]["file_location"]
+        transcoder = Transcoder(file_location)
+        transcoder.transcode_to_jpeg()
+        # job_helper.finish_job(job)
+    except Exception as ex:
+        logger.error(f"Starting import failed with: {ex}")
+        # job_helper.fail_job(job, str(ex))
+    return True
 
 
 ramq.run_consumer()
