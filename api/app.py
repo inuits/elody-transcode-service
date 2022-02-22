@@ -48,8 +48,9 @@ rabbit = RabbitMQ()
 rabbit.init_app(app, "basic", json.loads, json.dumps)
 
 
-@rabbit.queue("dams.file_uploaded")
-def start_file_transcode(routing_key, body, message_id):
+def _should_process_message(data):
+    if "mediafile" not in data or "mimetype" not in data or "url" not in data:
+        return False
     accepted_mimetypes = [
         "image/bmp",
         "image/gif",
@@ -57,10 +58,15 @@ def start_file_transcode(routing_key, body, message_id):
         "image/png",
         "image/tiff",
     ]
-    data = body["data"]
-    if "mediafile" not in data or "mimetype" not in data or "url" not in data:
-        return True
     if data["mimetype"] not in accepted_mimetypes:
+        return False
+    return True
+
+
+@rabbit.queue("dams.file_uploaded")
+def start_file_transcode(routing_key, body, message_id):
+    data = body["data"]
+    if not _should_process_message(data):
         return True
     # job = job_helper.create_new_job("Import csv", "import csv")
     # job = job_helper.progress_job(job)
@@ -69,8 +75,29 @@ def start_file_transcode(routing_key, body, message_id):
         transcoder.transcode_to_jpeg()
         # job_helper.finish_job(job)
     except Exception as ex:
-        logger.error(f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}')
-        # job_helper.fail_job(job, str(ex))
+        message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
+        logger.error(message)
+        # job_helper.fail_job(job, message)
+    return True
+
+
+@rabbit.queue("dams.file_uploaded")
+def add_pic_dimensions(routing_key, body, message_id):
+    data = body["data"]
+    if not _should_process_message(data):
+        return True
+    # job = job_helper.create_new_job("Import csv", "import csv")
+    # job = job_helper.progress_job(job)
+    try:
+        transcoder = Transcoder(data["mediafile"], data["url"])
+        transcoder.add_pic_dimensions()
+        # job_helper.finish_job(job)
+    except Exception as ex:
+        message = (
+            f'Adding dimensions for {data["mediafile"]["filename"]} failed with: {ex}'
+        )
+        logger.error(message)
+        # job_helper.fail_job(job, message)
     return True
 
 
