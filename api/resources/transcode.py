@@ -32,7 +32,7 @@ def _check_valid_content(content):
 
 
 class Transcode(Resource):
-    @app.require_oauth()
+    @app.require_oauth("transcode-mediafile")
     def post(self):
         content = _get_request_body()
         try:
