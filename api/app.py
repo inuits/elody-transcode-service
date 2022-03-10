@@ -102,17 +102,16 @@ def add_pic_dimensions(routing_key, body, message_id):
 
 
 require_oauth = MyResourceProtector(
-    os.getenv("STATIC_JWT", False),
-    {},
     os.getenv("REQUIRE_TOKEN", True) == ("True" or "true" or True),
 )
 validator = JWTValidator(
     logger,
-    os.getenv("STATIC_JWT", False),
     os.getenv("STATIC_ISSUER", False),
     os.getenv("STATIC_PUBLIC_KEY", False),
     os.getenv("REALMS", "").split(","),
-    os.getenv("REQUIRE_TOKEN", True) == ("True" or "true" or True),
+    os.getenv("ROLE_PERMISSION_FILE", "role_permission.json"),
+    os.getenv("SUPER_ADMIN_ROLE", "role_super_admin"),
+    os.getenv("REMOTE_TOKEN_VALIDATION", False),
 )
 require_oauth.register_token_validator(validator)
 
