@@ -2,9 +2,11 @@ import json
 import logging
 import os
 
+import requests
 from flask import Flask
 from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
+from healthcheck import HealthCheck
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
 from job_helper.job_helper import JobHelper
 from rabbitmq_pika_flask import RabbitMQ
@@ -37,9 +39,10 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+job_api_base_url = os.getenv("JOB_API_BASE_URL", "http://collection-api:8000")
 """
 job_helper = JobHelper(
-    job_api_base_url=os.getenv("JOB_API_BASE_URL", "http://collection-api:8000"),
+    job_api_base_url=job_api_base_url,
     static_jwt=os.getenv("STATIC_JWT", False),
 )
 """
@@ -47,6 +50,20 @@ job_helper = JobHelper(
 rabbit = RabbitMQ()
 rabbit.init_app(app, "basic", json.loads, json.dumps)
 
+
+
+def job_api_available():
+    return True, requests.get("{}{}".format(job_api_base_url, "/health"))
+
+
+def rabbit_available():
+    return True, rabbit.get_connection().is_open
+
+health = HealthCheck()
+health.add_check(job_api_available)
+health.add_check(rabbit_available)
+
+app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
 def _should_process_message(data):
     if "mediafile" not in data or "mimetype" not in data or "url" not in data:
