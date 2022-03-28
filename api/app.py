@@ -12,7 +12,6 @@ from job_helper.job_helper import JobHelper
 from rabbitmq_pika_flask import RabbitMQ
 from transcoder import Transcoder
 
-
 SWAGGER_URL = "/api/docs"  # URL for exposing Swagger UI (without trailing '/')
 API_URL = "/spec/dams-transcode-service.json"  # Our API url (can of course be a local resource)
 
@@ -51,19 +50,20 @@ rabbit = RabbitMQ()
 rabbit.init_app(app, "basic", json.loads, json.dumps)
 
 
-
 def job_api_available():
-    return True, requests.get("{}{}".format(job_api_base_url, "/health"))
+    return True, requests.get(f'{job_api_base_url}{"/health"}').json()
 
 
 def rabbit_available():
     return True, rabbit.get_connection().is_open
+
 
 health = HealthCheck()
 health.add_check(job_api_available)
 health.add_check(rabbit_available)
 
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
+
 
 def _should_process_message(data):
     if "mediafile" not in data or "mimetype" not in data or "url" not in data:
