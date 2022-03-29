@@ -23,8 +23,8 @@ api = Api(app)
 
 app.config.update(
     {
-        "MQ_EXCHANGE": os.getenv("RABMQ_SEND_EXCHANGE_NAME", "dams"),
-        "MQ_URL": os.getenv("RABMQ_RABBITMQ_URL", "amqp://localhost:5672"),
+        "MQ_EXCHANGE": os.getenv("RABMQ_SEND_EXCHANGE_NAME"),
+        "MQ_URL": os.getenv("RABMQ_RABBITMQ_URL"),
         "SECRET_KEY": "SomethingNotEntirelySecret",
         "TESTING": True,
         "DEBUG": True,
