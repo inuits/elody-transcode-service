@@ -59,8 +59,8 @@ def rabbit_available():
 
 
 health = HealthCheck()
-health.add_check(job_api_available)
-health.add_check(rabbit_available)
+if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
+    health.add_check(rabbit_available)
 
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
