@@ -24,6 +24,8 @@ COPY docker/pip.conf /etc
 
 RUN pip install -r requirements.txt -r requirements_dev.txt
 
+EXPOSE 5000
+
 ### Build stage
 FROM base-stage AS build-stage
 
@@ -40,3 +42,5 @@ ENV APP_ENV=prod
 COPY --from=build-stage /app /app
 
 ENV GUNICORN_CMD_ARGS="--workers=3"
+
+EXPOSE 8000
