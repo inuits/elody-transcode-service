@@ -84,7 +84,7 @@ def _should_process_message(data):
 def start_file_transcode(routing_key, body, message_id):
     data = body["data"]
     if not _should_process_message(data):
-        return True
+        return
     # job = job_helper.create_new_job("Import csv", "import csv")
     # job = job_helper.progress_job(job)
     try:
@@ -95,14 +95,13 @@ def start_file_transcode(routing_key, body, message_id):
         message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
         logger.error(message)
         # job_helper.fail_job(job, message)
-    return True
 
 
 @rabbit.queue("dams.file_uploaded")
 def add_pic_dimensions(routing_key, body, message_id):
     data = body["data"]
     if not _should_process_message(data):
-        return True
+        return
     # job = job_helper.create_new_job("Import csv", "import csv")
     # job = job_helper.progress_job(job)
     try:
@@ -115,7 +114,6 @@ def add_pic_dimensions(routing_key, body, message_id):
         )
         logger.error(message)
         # job_helper.fail_job(job, message)
-    return True
 
 
 require_oauth = MyResourceProtector(
