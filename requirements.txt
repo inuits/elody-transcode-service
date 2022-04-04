@@ -13,7 +13,7 @@ flask-swagger-ui==3.36.0
 Flask==1.1.2
 gunicorn==20.1.0
 idna==2.10
-inuits-jwt-auth==0.0.22
+inuits-jwt-auth==0.0.24
 itsdangerous==1.1.0
 Jinja2==2.11.2
 job_helper==0.1.8
