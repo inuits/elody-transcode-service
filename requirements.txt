@@ -22,6 +22,7 @@ numpy==1.22.3
 opencv-python-headless==4.5.5.64
 packaging==21.3
 pika==1.2.0
+Pillow==9.0.1
 py==1.11.0
 pycparser==2.21
 py-healthcheck==1.10.1

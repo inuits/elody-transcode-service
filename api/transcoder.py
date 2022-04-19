@@ -1,9 +1,13 @@
+import app
 import cv2
 import io
 import numpy
 import os
 import requests
 import tempfile
+
+from PIL import Image
+Image.MAX_IMAGE_PIXELS = None
 
 
 class Transcoder:
@@ -38,6 +42,13 @@ class Transcoder:
     def _get_raw_id(self, item):
         return item["_key"] if "_key" in item else item["_id"]
 
+    def _get_image_width_height_pil(self, image):
+        try:
+            img = Image.open(io.BytesIO(image))
+            return img.width, img.height
+        except:
+            return None, None
+
     def _get_image_width_height_opencv(self, image):
         try:
             img = self._process_file(image)
@@ -50,6 +61,9 @@ class Transcoder:
     def add_image_width_height(self):
         image = self._get_file()
         width, height = self._get_image_width_height_opencv(image)
+        if not width or not height:
+            app.logger.error("Failed to get width and/or height using OpenCV, trying PIL")
+            width, height = self._get_image_width_height_pil(image)
         if not width or not height:
             raise Exception("Could not get width and/or height")
         data = {"img_width": width, "img_height": height}
