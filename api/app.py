@@ -2,13 +2,11 @@ import json
 import logging
 import os
 
-import requests
 from flask import Flask
 from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
-from job_helper.job_helper import JobHelper
 from rabbitmq_pika_flask import RabbitMQ
 from transcoder import Transcoder
 
@@ -38,20 +36,9 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-job_api_base_url = os.getenv("JOB_API_BASE_URL", "http://collection-api:8000")
-"""
-job_helper = JobHelper(
-    job_api_base_url=job_api_base_url,
-    static_jwt=os.getenv("STATIC_JWT", False),
-)
-"""
 
 rabbit = RabbitMQ()
 rabbit.init_app(app, "basic", json.loads, json.dumps)
-
-
-def job_api_available():
-    return True, requests.get(f'{job_api_base_url}{"/health"}').json()
 
 
 def rabbit_available():
@@ -65,17 +52,31 @@ if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
 
-def _should_process_message(data):
+allowed_image_mimetypes = [
+    "image/jpg",
+    "image/jpeg",
+    "image/tiff",
+    "image/png",
+    "image/gif",
+    "image/bmp",
+]
+allowed_video_mimetypes = [
+    "video/x-msvideo",
+    "video/mp4",
+    "video/mpeg",
+    "video/ogg",
+    "video/mp2t",
+    "video/webm",
+    "video/3gpp",
+    "video/3gpp2",
+]
+allowed_mimetypes = allowed_image_mimetypes + allowed_video_mimetypes
+
+
+def _should_process_message(data, mimetypes):
     if "mediafile" not in data or "mimetype" not in data or "url" not in data:
         return False
-    accepted_mimetypes = [
-        "image/bmp",
-        "image/gif",
-        "image/jpeg",
-        "image/png",
-        "image/tiff",
-    ]
-    if data["mimetype"] not in accepted_mimetypes:
+    if data["mimetype"] not in mimetypes:
         return False
     return True
 
@@ -83,37 +84,32 @@ def _should_process_message(data):
 @rabbit.queue("dams.file_uploaded")
 def start_file_transcode(routing_key, body, message_id):
     data = body["data"]
-    if not _should_process_message(data):
+    if not _should_process_message(data, allowed_image_mimetypes):
         return
-    # job = job_helper.create_new_job("Import csv", "import csv")
-    # job = job_helper.progress_job(job)
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
         transcoder.transcode_to_jpeg()
-        # job_helper.finish_job(job)
     except Exception as ex:
         message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
         logger.error(message)
-        # job_helper.fail_job(job, message)
 
 
 @rabbit.queue("dams.file_uploaded")
 def add_pic_dimensions(routing_key, body, message_id):
     data = body["data"]
-    if not _should_process_message(data):
+    if not _should_process_message(data, allowed_mimetypes):
         return
-    # job = job_helper.create_new_job("Import csv", "import csv")
-    # job = job_helper.progress_job(job)
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
-        transcoder.add_pic_dimensions()
-        # job_helper.finish_job(job)
+        if data["mediafile"]["mimetype"] in allowed_image_mimetypes:
+            transcoder.add_image_width_height()
+        else:
+            transcoder.add_video_width_height()
     except Exception as ex:
         message = (
             f'Adding dimensions for {data["mediafile"]["filename"]} failed with: {ex}'
         )
         logger.error(message)
-        # job_helper.fail_job(job, message)
 
 
 require_oauth = MyResourceProtector(

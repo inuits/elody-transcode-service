@@ -18,17 +18,18 @@ def _get_request_body():
 
 
 def _check_valid_content(content):
-    accepted_mimetypes = [
-        "image/bmp",
-        "image/gif",
+    allowed_mimetypes = [
+        "image/jpg",
         "image/jpeg",
-        "image/png",
         "image/tiff",
+        "image/png",
+        "image/gif",
+        "image/bmp",
     ]
     if "mediafile" not in content or "mimetype" not in content or "url" not in content:
         abort(405, message="Invalid input")
-    if content["mimetype"] not in accepted_mimetypes:
-        abort(405, message="Not an accepted mimetype")
+    if content["mimetype"] not in allowed_mimetypes:
+        abort(405, message="Mimetype not allowed")
 
 
 class Transcode(Resource):

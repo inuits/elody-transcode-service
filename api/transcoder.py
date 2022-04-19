@@ -3,6 +3,7 @@ import io
 import numpy
 import os
 import requests
+import tempfile
 
 
 class Transcoder:
@@ -15,8 +16,53 @@ class Transcoder:
         self.storage_api_url = os.getenv("STORAGE_API_URL", "http://storage-api:8001")
         self.url = url
 
+    def _get_file(self):
+        req = requests.get(self.url, headers=self.headers)
+        if req.status_code != 200:
+            raise Exception(req.json())
+        return req.content
+
+    def _patch_mediafile(self, payload):
+        req = requests.patch(
+            f"{self.collection_api_url}/mediafiles/{self._get_raw_id(self.mediafile)}",
+            json=payload,
+            headers=self.headers,
+        )
+        if req.status_code != 201:
+            raise Exception(req.json())
+
+    def _process_file(self, file):
+        src_np_arr = numpy.frombuffer(file, numpy.uint8)
+        return cv2.imdecode(src_np_arr, cv2.IMREAD_COLOR)
+
     def _get_raw_id(self, item):
         return item["_key"] if "_key" in item else item["_id"]
+
+    def _get_image_width_height_opencv(self, image):
+        try:
+            img = self._process_file(image)
+            height = img.shape[0]
+            width = img.shape[1]
+            return width, height
+        except:
+            return None, None
+
+    def add_image_width_height(self):
+        image = self._get_file()
+        width, height = self._get_image_width_height_opencv(image)
+        if not width or not height:
+            raise Exception("Could not get width and/or height")
+        data = {"img_width": width, "img_height": height}
+        self._patch_mediafile(data)
+
+    def add_video_width_height(self):
+        with tempfile.NamedTemporaryFile() as temp:
+            temp.write(self._get_file())
+            vcap = cv2.VideoCapture(temp.name)
+            width = int(vcap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(vcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            data = {"img_width": width, "img_height": height}
+            self._patch_mediafile(data)
 
     def _upload_transcode(self, file):
         req = requests.post(
@@ -27,30 +73,8 @@ class Transcoder:
         if req.status_code != 201:
             raise Exception(req.json())
 
-    def _get_file(self):
-        req = requests.get(self.url, headers=self.headers)
-        if req.status_code != 200:
-            raise Exception(req.json())
-        return req
-
-    def _process_file(self):
-        req = self._get_file()
-        src_np_arr = numpy.frombuffer(req.content, numpy.uint8)
-        return cv2.imdecode(src_np_arr, cv2.IMREAD_COLOR)
-
-    def add_pic_dimensions(self):
-        opencv_img = self._process_file()
-        data = {"img_height": opencv_img.shape[0], "img_width": opencv_img.shape[1]}
-        req = requests.patch(
-            f"{self.collection_api_url}/mediafiles/{self._get_raw_id(self.mediafile)}",
-            json=data,
-            headers=self.headers,
-        )
-        if req.status_code != 201:
-            raise Exception(req.json())
-
     def transcode_to_jpeg(self):
-        opencv_img = self._process_file()
+        opencv_img = self._process_file(self._get_file())
         retval, ret_np_arr = cv2.imencode(".jpg", opencv_img)
         file = {"file": io.BytesIO(ret_np_arr.tobytes())}
         self._upload_transcode(file)
