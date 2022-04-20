@@ -129,12 +129,13 @@ require_oauth.register_token_validator(validator)
 app.register_blueprint(swaggerui_blueprint)
 
 from resources.spec import AsyncAPISpec, OpenAPISpec
-from resources.transcode import Transcode
+from resources.transcode import JpegTranscode, WidthHeightTranscode
 
 api.add_resource(AsyncAPISpec, "/spec/dams-transcode-service-events.html")
 api.add_resource(OpenAPISpec, "/spec/dams-transcode-service.json")
 
-api.add_resource(Transcode, "/transcode")
+api.add_resource(JpegTranscode, "/transcode/jpeg")
+api.add_resource(WidthHeightTranscode, "/transcode/widthheight")
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -7,6 +7,7 @@ import requests
 import tempfile
 
 from PIL import Image
+
 Image.MAX_IMAGE_PIXELS = None
 
 
@@ -62,7 +63,9 @@ class Transcoder:
         image = self._get_file()
         width, height = self._get_image_width_height_opencv(image)
         if not width or not height:
-            app.logger.error("Failed to get width and/or height using OpenCV, trying PIL")
+            app.logger.error(
+                "Failed to get width and/or height using OpenCV, trying PIL"
+            )
             width, height = self._get_image_width_height_pil(image)
         if not width or not height:
             raise Exception("Could not get width and/or height")
