@@ -93,8 +93,7 @@ class Transcoder:
     def _transcode_to_jpeg_opencv(self):
         opencv_img = self._process_file(self._get_file())
         retval, ret_np_arr = cv2.imencode(".jpg", opencv_img)
-        file = {"file": io.BytesIO(ret_np_arr.tobytes())}
-        self._upload_transcode(file)
+        return {"file": io.BytesIO(ret_np_arr.tobytes())}
 
     def _transcode_to_jpeg_pil(self):
         img = Image.open(io.BytesIO(self._get_file()))
@@ -102,12 +101,12 @@ class Transcoder:
         new_bytes = io.BytesIO()
         out_img.save(new_bytes, "jpeg", quality=95)
         new_bytes.seek(0)
-        file = {"file": new_bytes}
-        self._upload_transcode(file)
+        return {"file": new_bytes}
 
     def transcode_to_jpeg(self):
         try:
-            self._transcode_to_jpeg_opencv()
+            file = self._transcode_to_jpeg_opencv()
         except:
             app.logger.error("Failed to transcode to jpeg using OpenCV, trying PIL")
-            self._transcode_to_jpeg_pil()
+            file = self._transcode_to_jpeg_pil()
+        self._upload_transcode(file)
