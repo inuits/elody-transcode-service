@@ -8,7 +8,7 @@ include:
     file: 'python-pipeline.yml'
     ref: 'v1.3.0'
   - project: 'customers/coghent/infra/coghent-infra-gitlab-templates'
-    file    : 'npm-pipeline.yml'
+    file    : 'dams-dev-deploy.yml'
     ref     : 'master'
     
 variables:
