@@ -34,7 +34,7 @@ class JpegTranscode(Resource):
             transcoder.transcode_to_jpeg()
         except Exception as ex:
             return str(ex), 400
-        return f'Successfully transcoded {content["filename"]} to jpeg', 201
+        return f'Successfully transcoded {content["mediafile"]["filename"]} to jpeg', 201
 
 
 class WidthHeightTranscode(Resource):
@@ -50,4 +50,4 @@ class WidthHeightTranscode(Resource):
                 transcoder.add_video_width_height()
         except Exception as ex:
             return str(ex), 400
-        return f'Successfully added {content["filename"]} width & height', 201
+        return f'Successfully added {content["mediafile"]["filename"]} width & height', 201
