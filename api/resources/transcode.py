@@ -20,7 +20,7 @@ def _get_request_body():
 def _check_valid_content(content, mimetypes):
     if "mediafile" not in content or "mimetype" not in content or "url" not in content:
         abort(405, message="Malformed request body")
-    if content["mimetype"] not in mimetypes:
+    if not any(x in content["mimetype"] for x in mimetypes):
         abort(405, message="Mimetype not allowed")
 
 
@@ -28,7 +28,7 @@ class JpegTranscode(Resource):
     @app.require_oauth("transcode-to-jpeg")
     def post(self):
         content = _get_request_body()
-        _check_valid_content(content, app.allowed_image_mimetypes)
+        _check_valid_content(content, ["image/"])
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
             transcoder.transcode_to_jpeg()
@@ -41,10 +41,10 @@ class WidthHeightTranscode(Resource):
     @app.require_oauth("transcode-add-width-height")
     def post(self):
         content = _get_request_body()
-        _check_valid_content(content, app.allowed_mimetypes)
+        _check_valid_content(content, ["image/", "video/"])
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
-            if content["mimetype"] in app.allowed_image_mimetypes:
+            if "image/" in content["mimetype"]:
                 transcoder.add_image_width_height()
             else:
                 transcoder.add_video_width_height()

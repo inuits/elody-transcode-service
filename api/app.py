@@ -52,31 +52,10 @@ if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
 
-allowed_image_mimetypes = [
-    "image/jpg",
-    "image/jpeg",
-    "image/tiff",
-    "image/png",
-    "image/gif",
-    "image/bmp",
-]
-allowed_video_mimetypes = [
-    "video/x-msvideo",
-    "video/mp4",
-    "video/mpeg",
-    "video/ogg",
-    "video/mp2t",
-    "video/webm",
-    "video/3gpp",
-    "video/3gpp2",
-]
-allowed_mimetypes = allowed_image_mimetypes + allowed_video_mimetypes
-
-
 def _should_process_message(data, mimetypes):
     if "mediafile" not in data or "mimetype" not in data or "url" not in data:
         return False
-    if data["mimetype"] not in mimetypes:
+    if not any(x in data["mimetype"] for x in mimetypes):
         return False
     return True
 
@@ -84,7 +63,7 @@ def _should_process_message(data, mimetypes):
 @rabbit.queue("dams.file_uploaded")
 def start_file_transcode(routing_key, body, message_id):
     data = body["data"]
-    if not _should_process_message(data, allowed_image_mimetypes):
+    if not _should_process_message(data, ["image/"]):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
@@ -97,11 +76,11 @@ def start_file_transcode(routing_key, body, message_id):
 @rabbit.queue("dams.file_uploaded")
 def add_pic_dimensions(routing_key, body, message_id):
     data = body["data"]
-    if not _should_process_message(data, allowed_mimetypes):
+    if not _should_process_message(data, ["image/", "video/"]):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
-        if data["mediafile"]["mimetype"] in allowed_image_mimetypes:
+        if "image/" in data["mediafile"]["mimetype"]:
             transcoder.add_image_width_height()
         else:
             transcoder.add_video_width_height()
