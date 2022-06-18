@@ -90,13 +90,13 @@ class Transcoder:
         if req.status_code != 201:
             raise Exception(req.json())
 
-    def _transcode_to_jpeg_opencv(self):
-        opencv_img = self._process_file(self._get_file())
+    def _transcode_to_jpeg_opencv(self, original_file):
+        opencv_img = self._process_file(original_file)
         retval, ret_np_arr = cv2.imencode(".jpg", opencv_img)
         return {"file": io.BytesIO(ret_np_arr.tobytes())}
 
-    def _transcode_to_jpeg_pil(self):
-        img = Image.open(io.BytesIO(self._get_file()))
+    def _transcode_to_jpeg_pil(self, original_file):
+        img = Image.open(io.BytesIO(original_file))
         out_img = img.convert("RGB")
         new_bytes = io.BytesIO()
         out_img.save(new_bytes, "jpeg", quality=95)
@@ -104,9 +104,10 @@ class Transcoder:
         return {"file": new_bytes}
 
     def transcode_to_jpeg(self):
+        original_file = self._get_file()
         try:
-            file = self._transcode_to_jpeg_opencv()
+            file = self._transcode_to_jpeg_opencv(original_file)
         except:
             app.logger.error("Failed to transcode to jpeg using OpenCV, trying PIL")
-            file = self._transcode_to_jpeg_pil()
+            file = self._transcode_to_jpeg_pil(original_file)
         self._upload_transcode(file)
