@@ -81,10 +81,10 @@ class Transcoder:
             data = {"img_width": width, "img_height": height}
             self._patch_mediafile(data)
 
-    def _upload_transcode(self, file):
+    def _upload_transcode(self, file_name, file_bytes):
         req = requests.post(
             f'{self.storage_api_url}/upload/transcode?id={self.mediafile["_key"]}',
-            files=file,
+            files={"file": (file_name, file_bytes)},
             headers=self.headers,
         )
         if req.status_code != 201:
@@ -93,7 +93,7 @@ class Transcoder:
     def _transcode_to_jpeg_opencv(self, original_file):
         opencv_img = self._process_file(original_file)
         retval, ret_np_arr = cv2.imencode(".jpg", opencv_img)
-        return {"file": io.BytesIO(ret_np_arr.tobytes())}
+        return io.BytesIO(ret_np_arr.tobytes())
 
     def _transcode_to_jpeg_pil(self, original_file):
         img = Image.open(io.BytesIO(original_file))
@@ -101,13 +101,14 @@ class Transcoder:
         new_bytes = io.BytesIO()
         out_img.save(new_bytes, "jpeg", quality=95)
         new_bytes.seek(0)
-        return {"file": new_bytes}
+        return new_bytes
 
     def transcode_to_jpeg(self):
         original_file = self._get_file()
         try:
-            file = self._transcode_to_jpeg_opencv(original_file)
+            file_bytes = self._transcode_to_jpeg_opencv(original_file)
         except:
             app.logger.error("Failed to transcode to jpeg using OpenCV, trying PIL")
-            file = self._transcode_to_jpeg_pil(original_file)
-        self._upload_transcode(file)
+            file_bytes = self._transcode_to_jpeg_pil(original_file)
+        file_name = f'{os.path.splitext(self.mediafile["original_filename"])[0]}.jpg'
+        self._upload_transcode(file_name, file_bytes)
