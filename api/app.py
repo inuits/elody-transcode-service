@@ -91,6 +91,19 @@ def add_pic_dimensions(routing_key, body, message_id):
         logger.error(message)
 
 
+@rabbit.queue("dams.file_uploaded")
+def transcode_to_webm(routing_key, body, message_id):
+    data = body["data"]
+    if not _should_process_message(data, ["video/"]):
+        return
+    try:
+        transcoder = Transcoder(data["mediafile"], data["url"])
+        transcoder.transcode_to_webm()
+    except Exception as ex:
+        message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
+        logger.error(message)
+
+
 require_oauth = MyResourceProtector(
     os.getenv("REQUIRE_TOKEN", True) == ("True" or "true" or True),
 )
@@ -108,12 +121,13 @@ require_oauth.register_token_validator(validator)
 app.register_blueprint(swaggerui_blueprint)
 
 from resources.spec import AsyncAPISpec, OpenAPISpec
-from resources.transcode import JpegTranscode, WidthHeightTranscode
+from resources.transcode import JpegTranscode, WebmTranscode, WidthHeightTranscode
 
 api.add_resource(AsyncAPISpec, "/spec/dams-transcode-service-events.html")
 api.add_resource(OpenAPISpec, "/spec/dams-transcode-service.json")
 
 api.add_resource(JpegTranscode, "/transcode/jpeg")
+api.add_resource(WebmTranscode, "/transcode/webm")
 api.add_resource(WidthHeightTranscode, "/transcode/widthheight")
 
 if __name__ == "__main__":

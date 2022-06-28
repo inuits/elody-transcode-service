@@ -34,7 +34,26 @@ class JpegTranscode(Resource):
             transcoder.transcode_to_jpeg()
         except Exception as ex:
             return str(ex), 400
-        return f'Successfully transcoded {content["mediafile"]["filename"]} to jpeg', 201
+        return (
+            f'Successfully transcoded {content["mediafile"]["filename"]} to jpeg',
+            201,
+        )
+
+
+class WebmTranscode(Resource):
+    @app.require_oauth("transcode-to-jpeg")
+    def post(self):
+        content = _get_request_body()
+        _check_valid_content(content, ["video/"])
+        try:
+            transcoder = Transcoder(content["mediafile"], content["url"])
+            transcoder.transcode_to_webm()
+        except Exception as ex:
+            return str(ex), 400
+        return (
+            f'Successfully transcoded {content["mediafile"]["filename"]} to webm',
+            201,
+        )
 
 
 class WidthHeightTranscode(Resource):
@@ -50,4 +69,7 @@ class WidthHeightTranscode(Resource):
                 transcoder.add_video_width_height()
         except Exception as ex:
             return str(ex), 400
-        return f'Successfully added {content["mediafile"]["filename"]} width & height', 201
+        return (
+            f'Successfully added {content["mediafile"]["filename"]} width & height',
+            201,
+        )
