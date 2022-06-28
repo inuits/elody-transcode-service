@@ -121,8 +121,8 @@ class Transcoder:
             read_file.close()
             vidcap = cv2.VideoCapture(read_location)
             fourcc = cv2.VideoWriter.fourcc("V", "P", "9", "0")
-            width = vidcap.get(cv2.CAP_PROP_FRAME_WIDTH)
-            height = vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            width = int(vidcap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = vidcap.get(cv2.CAP_PROP_FPS)
             new_file_name = f'{os.path.splitext(self.mediafile["filename"])[0]}.webm'
             write_location = os.path.join(temp_dir, new_file_name)
