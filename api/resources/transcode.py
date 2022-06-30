@@ -40,18 +40,18 @@ class JpegTranscode(Resource):
         )
 
 
-class WebmTranscode(Resource):
+class MP4Transcode(Resource):
     @app.require_oauth("transcode-to-jpeg")
     def post(self):
         content = _get_request_body()
         _check_valid_content(content, ["video/"])
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
-            transcoder.transcode_to_webm()
+            transcoder.transcode_to_mp4()
         except Exception as ex:
             return str(ex), 400
         return (
-            f'Successfully transcoded {content["mediafile"]["filename"]} to webm',
+            f'Successfully transcoded {content["mediafile"]["filename"]} to mp4',
             201,
         )
 

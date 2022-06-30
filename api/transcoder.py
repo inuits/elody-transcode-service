@@ -1,6 +1,7 @@
 import app
 import cv2
 import io
+import moviepy.editor as moviepy
 import numpy
 import os
 import requests
@@ -113,27 +114,19 @@ class Transcoder:
         file_name = f'{os.path.splitext(self.mediafile["original_filename"])[0]}.jpg'
         self._upload_transcode(file_name, file_bytes)
 
-    def transcode_to_webm(self):
+    def transcode_to_mp4(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             read_location = os.path.join(temp_dir, self.mediafile["filename"])
             read_file = open(read_location, "wb")
             read_file.write(self._get_file())
             read_file.close()
-            vidcap = cv2.VideoCapture(read_location)
-            fourcc = cv2.VideoWriter.fourcc("V", "P", "9", "0")
-            width = int(vidcap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            fps = vidcap.get(cv2.CAP_PROP_FPS)
-            new_file_name = f'{os.path.splitext(self.mediafile["filename"])[0]}.webm'
+            new_file_name = (
+                f'{os.path.splitext(self.mediafile["original_filename"])[0]}.mp4'
+            )
             write_location = os.path.join(temp_dir, new_file_name)
-            vidwrite = cv2.VideoWriter(write_location, fourcc, fps, (width, height))
-            while True:
-                ret, image = vidcap.read()
-                if not ret:
-                    break
-                vidwrite.write(image)
-            vidcap.release()
-            vidwrite.release()
+            vfc = moviepy.VideoFileClip(read_location)
+            vfc.write_videofile(write_location)
+            vfc.close()
             write_file = open(write_location, "rb")
             self._upload_transcode(new_file_name, write_file.read())
             write_file.close()
