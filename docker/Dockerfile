@@ -22,7 +22,7 @@ ENV APP_ENV=dev
 
 COPY docker/pip.conf /etc
 
-RUN pip install -r requirements.txt -r requirements_dev.txt && pip cache purge
+RUN pip install --no-cache-dir -r requirements.txt -r requirements_dev.txt
 
 EXPOSE 5000
 
@@ -32,7 +32,7 @@ FROM base-stage AS build-stage
 COPY docker/pip.conf /etc
 COPY api ./api
 
-RUN pip install -r requirements.txt && pip cache purge
+RUN pip install --no-cache-dir -r requirements.txt
 
 ### Production stage
 FROM base-stage AS production-stage
