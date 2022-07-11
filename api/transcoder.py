@@ -128,6 +128,5 @@ class Transcoder:
                 vfc.write_videofile(
                     write_location, temp_audiofile_path=temp_dir, logger=None, threads=4
                 )
-                time.sleep(60)
-                with open(write_location, "rb") as write_file:
-                    self._upload_transcode(new_file_name, write_file.read())
+            with open(write_location, "rb") as write_file:
+                self._upload_transcode(new_file_name, write_file.read())
