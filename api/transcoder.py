@@ -125,7 +125,7 @@ class Transcoder:
             write_location = os.path.join(temp_dir, new_file_name)
             with moviepy.VideoFileClip(read_location) as vfc:
                 vfc.write_videofile(
-                    write_location, temp_audiofile_path=temp_dir, logger=None
+                    write_location, temp_audiofile_path=temp_dir, logger=None, threads=4
                 )
                 with open(write_location, "rb") as write_file:
                     self._upload_transcode(new_file_name, write_file.read())
