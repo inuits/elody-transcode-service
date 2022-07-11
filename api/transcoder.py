@@ -117,16 +117,15 @@ class Transcoder:
     def transcode_to_mp4(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             read_location = os.path.join(temp_dir, self.mediafile["filename"])
-            read_file = open(read_location, "wb")
-            read_file.write(self._get_file())
-            read_file.close()
+            with open(read_location, "wb") as read_file:
+                read_file.write(self._get_file())
             new_file_name = (
                 f'{os.path.splitext(self.mediafile["original_filename"])[0]}.mp4'
             )
             write_location = os.path.join(temp_dir, new_file_name)
-            vfc = moviepy.VideoFileClip(read_location)
-            vfc.write_videofile(write_location, temp_audiofile_path=temp_dir, logger=None)
-            vfc.close()
-            write_file = open(write_location, "rb")
-            self._upload_transcode(new_file_name, write_file.read())
-            write_file.close()
+            with moviepy.VideoFileClip(read_location) as vfc:
+                vfc.write_videofile(
+                    write_location, temp_audiofile_path=temp_dir, logger=None
+                )
+                with open(write_location, "rb") as write_file:
+                    self._upload_transcode(new_file_name, write_file.read())
