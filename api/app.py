@@ -69,7 +69,9 @@ def start_file_transcode(routing_key, body, message_id):
         transcoder = Transcoder(data["mediafile"], data["url"])
         transcoder.transcode_to_jpeg()
     except Exception as ex:
-        message = f'Transcoding {data["mediafile"]["filename"]} to JPEG failed with: {ex}'
+        message = (
+            f'Transcoding {data["mediafile"]["filename"]} to JPEG failed with: {ex}'
+        )
         logger.error(message)
 
 
@@ -100,7 +102,9 @@ def transcode_to_mp4(routing_key, body, message_id):
         transcoder = Transcoder(data["mediafile"], data["url"])
         transcoder.transcode_to_mp4()
     except Exception as ex:
-        message = f'Transcoding {data["mediafile"]["filename"]} to MP4 failed with: {ex}'
+        message = (
+            f'Transcoding {data["mediafile"]["filename"]} to MP4 failed with: {ex}'
+        )
         logger.error(message)
 
 
