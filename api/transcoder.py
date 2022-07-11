@@ -115,6 +115,7 @@ class Transcoder:
         self._upload_transcode(file_name, file_bytes)
 
     def transcode_to_mp4(self):
+        app.logger.info(f'TRYING TO TRANSCODE {self.mediafile["filename"]}')
         read_file = open(self.mediafile["filename"], "wb")
         read_file.write(self._get_file())
         read_file.close()
@@ -129,3 +130,4 @@ class Transcoder:
         self._upload_transcode(new_file_name, write_file.read())
         write_file.close()
         os.remove(new_file_name)
+        app.logger.info(f'FINISHED TRANSCODING {self.mediafile["filename"]}')
