@@ -115,17 +115,18 @@ class Transcoder:
         self._upload_transcode(file_name, file_bytes)
 
     def transcode_to_mp4(self):
-        read_file = open(self.mediafile["filename"], "wb")
-        read_file.write(self._get_file())
-        read_file.close()
-        new_file_name = (
-            f'{os.path.splitext(self.mediafile["original_filename"])[0]}.mp4'
-        )
-        vfc = moviepy.VideoFileClip(self.mediafile["filename"])
-        vfc.write_videofile(new_file_name)
-        vfc.close()
-        os.remove(self.mediafile["filename"])
-        write_file = open(new_file_name, "rb")
-        self._upload_transcode(new_file_name, write_file.read())
-        write_file.close()
-        os.remove(new_file_name)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            read_location = os.path.join(temp_dir, self.mediafile["filename"])
+            read_file = open(read_location, "wb")
+            read_file.write(self._get_file())
+            read_file.close()
+            new_file_name = (
+                f'{os.path.splitext(self.mediafile["original_filename"])[0]}.mp4'
+            )
+            write_location = os.path.join(temp_dir, new_file_name)
+            vfc = moviepy.VideoFileClip(read_location)
+            vfc.write_videofile(write_location)
+            vfc.close()
+            write_file = open(write_location, "rb")
+            self._upload_transcode(new_file_name, write_file.read())
+            write_file.close()
