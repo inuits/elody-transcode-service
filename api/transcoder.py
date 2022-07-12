@@ -1,13 +1,12 @@
 import app
 import cv2
 import io
-import moviepy.editor as moviepy
 import numpy
 import os
 import requests
 import tempfile
-import time
 
+from converter import Converter
 from PIL import Image
 
 Image.MAX_IMAGE_PIXELS = None
@@ -124,9 +123,25 @@ class Transcoder:
                 f'{os.path.splitext(self.mediafile["original_filename"])[0]}.mp4'
             )
             write_location = os.path.join(temp_dir, new_file_name)
-            with moviepy.VideoFileClip(read_location) as vfc:
-                vfc.write_videofile(
-                    write_location, temp_audiofile_path=temp_dir, logger=None, threads=4
-                )
+            c = Converter()
+            info = c.probe(read_location)
+            opts = {
+                "format": "mp4",
+                "video": {
+                    "codec": "h264",
+                    "width": info.video.video_width,
+                    "height": info.video.video_height,
+                    "fps": info.video.video_fps,
+                },
+            }
+            if info.audio:
+                opts["audio"] = {
+                    "codec": "aac",
+                    "samplerate": info.audio.audio_samplerate,
+                    "channels": info.audio.audio_channels,
+                }
+            conv = c.convert(read_location, write_location, opts, timeout=0)
+            for _ in conv:
+                pass
             with open(write_location, "rb") as write_file:
                 self._upload_transcode(new_file_name, write_file.read())

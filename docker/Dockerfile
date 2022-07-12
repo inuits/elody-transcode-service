@@ -3,7 +3,7 @@ FROM python:3.10-slim AS base-stage
 
 ENV FLASK_APP=app.py
 
-RUN apt-get update && apt-get install -y git && apt-get clean && rm -rf /var/lib/apt/lists/* \
+RUN apt-get update && apt-get install -y git ffmpeg && apt-get clean && rm -rf /var/lib/apt/lists/* \
     && adduser --disabled-password --home /app --shell /bin/bash app
 USER app
 WORKDIR /app
