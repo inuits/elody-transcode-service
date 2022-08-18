@@ -8,7 +8,6 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
 from rabbitmq_pika_flask import RabbitMQ
-from transcoder import Transcoder
 
 SWAGGER_URL = "/api/docs"  # URL for exposing Swagger UI (without trailing '/')
 API_URL = "/spec/dams-transcode-service.json"  # Our API url (can of course be a local resource)
@@ -51,59 +50,6 @@ if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
 
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
-
-def _should_process_message(data, mimetypes):
-    if "mediafile" not in data or "mimetype" not in data or "url" not in data:
-        return False
-    if not any(x in data["mimetype"] for x in mimetypes):
-        return False
-    return True
-
-
-@rabbit.queue("dams.file_uploaded")
-def start_file_transcode(routing_key, body, message_id):
-    data = body["data"]
-    if not _should_process_message(data, ["image/"]):
-        return
-    try:
-        transcoder = Transcoder(data["mediafile"], data["url"])
-        transcoder.transcode_to_jpeg()
-    except Exception as ex:
-        message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
-        logger.error(message)
-
-
-@rabbit.queue("dams.file_uploaded")
-def add_pic_dimensions(routing_key, body, message_id):
-    data = body["data"]
-    if not _should_process_message(data, ["image/", "video/"]):
-        return
-    try:
-        transcoder = Transcoder(data["mediafile"], data["url"])
-        if "image/" in data["mediafile"]["mimetype"]:
-            transcoder.add_image_width_height()
-        else:
-            transcoder.add_video_width_height()
-    except Exception as ex:
-        message = (
-            f'Adding dimensions for {data["mediafile"]["filename"]} failed with: {ex}'
-        )
-        logger.error(message)
-
-
-@rabbit.queue("dams.file_uploaded")
-def transcode_to_mp4(routing_key, body, message_id):
-    data = body["data"]
-    if not _should_process_message(data, ["video/"]):
-        return
-    try:
-        transcoder = Transcoder(data["mediafile"], data["url"])
-        transcoder.transcode_to_mp4()
-    except Exception as ex:
-        message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
-        logger.error(message)
-
-
 require_oauth = MyResourceProtector(
     logger,
     os.getenv("REQUIRE_TOKEN", True) == ("True" or "true" or True),
@@ -123,6 +69,7 @@ app.register_blueprint(swaggerui_blueprint)
 
 from resources.spec import AsyncAPISpec, OpenAPISpec
 from resources.transcode import JpegTranscode, MP4Transcode, WidthHeightTranscode
+import resources.queues
 
 api.add_resource(AsyncAPISpec, "/spec/dams-transcode-service-events.html")
 api.add_resource(OpenAPISpec, "/spec/dams-transcode-service.json")
