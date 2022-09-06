@@ -4,7 +4,7 @@ import requests
 import tempfile
 
 from converter import Converter
-from PIL import Image
+from PIL import Image, ImageOps
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -41,7 +41,7 @@ class Transcoder:
 
     def transcode_to_jpeg(self):
         with Image.open(io.BytesIO(self.__get_file())) as img:
-            out_img = img.convert("RGB")
+            out_img = ImageOps.exif_transpose(img).convert("RGB")
         new_bytes = io.BytesIO()
         out_img.save(new_bytes, "jpeg", quality=95)
         new_bytes.seek(0)
