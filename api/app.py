@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import sentry_sdk
 
 from flask import Flask
 from flask_restful import Api
@@ -9,6 +10,7 @@ from healthcheck import HealthCheck
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
 from inuits_otel_tracer.tracer import Tracer
 from rabbitmq_pika_flask import RabbitMQ
+from sentry_sdk.integrations.flask import FlaskIntegration
 
 traceObject = Tracer(
     os.getenv("OTEL_ENABLED", False) in ["True", "true", True],
@@ -18,6 +20,9 @@ traceObject = Tracer(
 traceObject.configTracer(
     endpoint=os.getenv("OTLP_EXPORTER_ENDPOINT", "otel-collector:4317"), isInsecure=True
 )
+
+if os.getenv("SENTRY_ENABLED", False):
+    sentry_sdk.init(dsn=os.getenv("SENTRY_DSN"), integrations=[FlaskIntegration()])
 
 SWAGGER_URL = "/api/docs"  # URL for exposing Swagger UI (without trailing '/')
 API_URL = "/spec/dams-transcode-service.json"  # Our API url (can of course be a local resource)
