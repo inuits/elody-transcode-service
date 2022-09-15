@@ -84,8 +84,8 @@ app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 from resources.spec import AsyncAPISpec, OpenAPISpec
 from resources.transcode import (
     JpegTranscode,
-    MP4Transcode,
     MP3Transcode,
+    MP4Transcode,
     WidthHeightTranscode,
 )
 import resources.queues
@@ -94,8 +94,8 @@ api.add_resource(AsyncAPISpec, "/spec/dams-transcode-service-events.html")
 api.add_resource(OpenAPISpec, "/spec/dams-transcode-service.json")
 
 api.add_resource(JpegTranscode, "/transcode/jpeg")
-api.add_resource(MP4Transcode, "/transcode/mp4")
 api.add_resource(MP3Transcode, "/transcode/mp3")
+api.add_resource(MP4Transcode, "/transcode/mp4")
 api.add_resource(WidthHeightTranscode, "/transcode/widthheight")
 
 
