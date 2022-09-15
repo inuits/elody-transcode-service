@@ -56,6 +56,24 @@ class MP4Transcode(Resource):
         )
 
 
+class MP3Transcode(Resource):
+    @app.require_oauth("transcode-to-mp3")
+    def post(self):
+        content = _get_request_body()
+        _check_valid_content(content, ["audio/"])
+        if content["madiafile"]["filename"].lower().endswith("mp3"):
+            abort(400, message="Audio file is mp3 already")
+        try:
+            transcoder = Transcoder(content["mediafile"], content["url"])
+            transcoder.transcode_to_mp3()
+        except Exception as ex:
+            return str(ex), 400
+        return (
+            f'Successfully transcoded {content["mediafile"]["filename"]} to mp3',
+            201,
+        )
+
+
 class WidthHeightTranscode(Resource):
     @app.require_oauth("transcode-add-width-height")
     def post(self):
