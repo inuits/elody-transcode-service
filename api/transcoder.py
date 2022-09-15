@@ -5,6 +5,7 @@ import tempfile
 
 from converter import Converter
 from PIL import Image, ImageOps
+import pydub
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -78,6 +79,20 @@ class Transcoder:
             conv = c.convert(read_location, write_location, opts, timeout=0)
             for _ in conv:
                 pass
+            with open(write_location, "rb") as write_file:
+                self.__upload_transcode(new_file_name, write_file.read())
+
+    def transcode_to_mp3(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            read_location = os.path.join(temp_dir, self.mediafile["filename"])
+            with open(read_location, "wb") as read_file:
+                read_file.write(self.__get_file())
+            new_file_name = (
+                f'{os.path.splitext(self.mediafile["original_filename"])[0]}.mp3'
+            )
+            write_location = os.path.join(temp_dir, new_file_name)
+            sound = pydub.AudioSegment.from_wav(read_location)
+            sound.export(write_location, format="mp3")
             with open(write_location, "rb") as write_file:
                 self.__upload_transcode(new_file_name, write_file.read())
 

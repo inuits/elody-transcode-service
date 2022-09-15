@@ -30,3 +30,4 @@ six==1.16.0
 urllib3==1.26.12
 video-converter-ubicast==2.0.1
 Werkzeug==2.2.2
+pydub==0.25.1

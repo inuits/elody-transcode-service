@@ -53,3 +53,16 @@ def transcode_to_mp4(routing_key, body, message_id):
     except Exception as ex:
         message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
         app.logger.error(message)
+
+
+@app.rabbit.queue("dams.file_uploaded")
+def transcode_to_mp3(routing_key, body, message_id):
+    data = body["data"]
+    if not __should_process_message(data, ["audio/"]):
+        return
+    try:
+        transcoder = Transcoder(data["mediafile"], data["url"])
+        transcoder.transcode_to_mp3()
+    except Exception as ex:
+        message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
+        app.logger.error(message)
