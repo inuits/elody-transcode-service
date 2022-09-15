@@ -1,11 +1,11 @@
 import io
 import os
+import pydub
 import requests
 import tempfile
 
 from converter import Converter
 from PIL import Image, ImageOps
-import pydub
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -91,7 +91,7 @@ class Transcoder:
                 f'{os.path.splitext(self.mediafile["original_filename"])[0]}.mp3'
             )
             write_location = os.path.join(temp_dir, new_file_name)
-            sound = pydub.AudioSegment.from_wav(read_location)
+            sound = pydub.AudioSegment.from_file(read_location)
             sound.export(write_location, format="mp3")
             with open(write_location, "rb") as write_file:
                 self.__upload_transcode(new_file_name, write_file.read())

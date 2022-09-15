@@ -58,7 +58,9 @@ def transcode_to_mp4(routing_key, body, message_id):
 @app.rabbit.queue("dams.file_uploaded")
 def transcode_to_mp3(routing_key, body, message_id):
     data = body["data"]
-    if not __should_process_message(data, ["audio/"]):
+    if not __should_process_message(data, ["audio/"]) or data["madiafile"][
+        "filename"
+    ].lower().endswith("mp3"):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
