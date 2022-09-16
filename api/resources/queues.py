@@ -45,9 +45,10 @@ def transcode_to_jpeg(routing_key, body, message_id):
 @app.rabbit.queue("dams.file_uploaded")
 def transcode_to_mp3(routing_key, body, message_id):
     data = body["data"]
-    if not __should_process_message(data, ["audio/"]) or data["madiafile"][
-        "filename"
-    ].lower().endswith("mp3"):
+    if (
+        not __should_process_message(data, ["audio/"])
+        or data["mimetype"] == "audio/mpeg"
+    ):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])

@@ -45,8 +45,8 @@ class MP3Transcode(Resource):
     def post(self):
         content = _get_request_body()
         _check_valid_content(content, ["audio/"])
-        if content["madiafile"]["filename"].lower().endswith("mp3"):
-            abort(400, message="Audio file is mp3 already")
+        if content["mimetype"] == "audio/mpeg":
+            abort(400, message=f'{content["mediafile"]["filename"]} is already an mp3')
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
             transcoder.transcode_to_mp3()
