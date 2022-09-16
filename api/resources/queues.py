@@ -12,20 +12,7 @@ def __should_process_message(data, mimetypes):
 
 
 @app.rabbit.queue("dams.file_uploaded")
-def start_file_transcode(routing_key, body, message_id):
-    data = body["data"]
-    if not __should_process_message(data, ["image/"]):
-        return
-    try:
-        transcoder = Transcoder(data["mediafile"], data["url"])
-        transcoder.transcode_to_jpeg()
-    except Exception as ex:
-        message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
-        app.logger.error(message)
-
-
-@app.rabbit.queue("dams.file_uploaded")
-def add_pic_dimensions(routing_key, body, message_id):
+def transcode_add_width_height(routing_key, body, message_id):
     data = body["data"]
     if not __should_process_message(data, ["image/", "video/"]):
         return
@@ -43,13 +30,13 @@ def add_pic_dimensions(routing_key, body, message_id):
 
 
 @app.rabbit.queue("dams.file_uploaded")
-def transcode_to_mp4(routing_key, body, message_id):
+def transcode_to_jpeg(routing_key, body, message_id):
     data = body["data"]
-    if not __should_process_message(data, ["video/"]):
+    if not __should_process_message(data, ["image/"]):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
-        transcoder.transcode_to_mp4()
+        transcoder.transcode_to_jpeg()
     except Exception as ex:
         message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
         app.logger.error(message)
@@ -65,6 +52,19 @@ def transcode_to_mp3(routing_key, body, message_id):
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
         transcoder.transcode_to_mp3()
+    except Exception as ex:
+        message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
+        app.logger.error(message)
+
+
+@app.rabbit.queue("dams.file_uploaded")
+def transcode_to_mp4(routing_key, body, message_id):
+    data = body["data"]
+    if not __should_process_message(data, ["video/"]):
+        return
+    try:
+        transcoder = Transcoder(data["mediafile"], data["url"])
+        transcoder.transcode_to_mp4()
     except Exception as ex:
         message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
         app.logger.error(message)
