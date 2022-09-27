@@ -22,7 +22,7 @@ class Transcoder:
 
     def add_image_width_height(self):
         with Image.open(io.BytesIO(self.__get_file())) as img:
-            data = {"img_width": img.width, "img_height": img.width}
+            data = {"img_width": img.width, "img_height": img.height}
         if not data["img_width"] or not data["img_height"]:
             raise Exception("Could not get width and/or height")
         self.__patch_mediafile(data)
