@@ -1,5 +1,6 @@
 aniso8601==9.0.1
 Authlib==1.1.0
+blinker==1.5
 certifi==2022.9.24
 cffi==1.15.1
 charset-normalizer==2.1.1
