@@ -90,12 +90,5 @@ api.add_resource(MP3Transcode, "/transcode/mp3")
 api.add_resource(MP4Transcode, "/transcode/mp4")
 api.add_resource(WidthHeightTranscode, "/transcode/widthheight")
 
-
-@app.after_request
-def add_header(response):
-    response.headers["Jaeger-trace-id"] = os.getenv("JAEGER_TRACE_ID", "default-id")
-    return response
-
-
 if __name__ == "__main__":
     app.run(debug=True)
