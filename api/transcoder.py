@@ -42,8 +42,8 @@ class Transcoder:
         if req.status_code != 201:
             raise Exception(req.text.strip())
 
-    def __transcode_to_mp4(self, temp_dir, file_path, new_file_name):
-        write_location = os.path.join(temp_dir, new_file_name)
+    def __transcode_to_mp4(self, temp_dir, file_path, output_filename):
+        write_location = os.path.join(temp_dir, output_filename)
         c = Converter()
         info = c.probe(file_path)
         opts = {
@@ -64,8 +64,8 @@ class Transcoder:
         conv = c.convert(file_path, write_location, opts, timeout=0)
         for _ in conv:
             pass
-        with open(write_location, "rb") as write_file:
-            self.__upload_transcode(new_file_name, write_file)
+        with open(write_location, "rb") as output_file:
+            self.__upload_transcode(output_filename, output_file)
 
     def __upload_transcode(self, file_name, file_bytes):
         req = requests.post(
@@ -107,10 +107,10 @@ class Transcoder:
                         self.__upload_transcode(output_filename, output_file)
 
     def transcode_to_mp3(self):
-        with io.BytesIO(self.__get_file()) as file:
-            sound = pydub.AudioSegment.from_file(file)
+        with io.BytesIO(self.__get_file()) as input_file:
+            audio = pydub.AudioSegment.from_file(input_file)
         with io.BytesIO() as output_file:
-            sound.export(output_file, format="mp3")
+            audio.export(output_file, format="mp3")
             output_filename = (
                 f'{os.path.splitext(self.mediafile["original_filename"])[0]}.mp3'
             )
