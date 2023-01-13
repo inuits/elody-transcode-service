@@ -1,34 +1,15 @@
 import app
 
-from flask import request
-from flask_restful import abort, Resource
+from flask_restful import abort
+from resources.base_resource import BaseResource
 from transcoder import Transcoder
-from werkzeug.exceptions import BadRequest
 
 
-def _check_valid_content(content, mimetypes):
-    if "mediafile" not in content or "mimetype" not in content or "url" not in content:
-        abort(405, message="Malformed request body")
-    if not any(x in content["mimetype"] for x in mimetypes):
-        abort(405, message="Mimetype not allowed")
-
-
-def _get_request_body():
-    try:
-        request_body = request.get_json()
-        invalid_input = request_body is None
-    except BadRequest:
-        invalid_input = True
-    if invalid_input:
-        abort(405, message="Invalid input")
-    return request_body
-
-
-class JpegTranscode(Resource):
+class JpegTranscode(BaseResource):
     @app.require_oauth("transcode-to-jpeg")
     def post(self):
-        content = _get_request_body()
-        _check_valid_content(content, ["image/"])
+        content = self._get_request_body()
+        self._check_valid_content(content, ["image/"])
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
             transcoder.transcode_to_jpeg()
@@ -40,11 +21,11 @@ class JpegTranscode(Resource):
         )
 
 
-class MP3Transcode(Resource):
+class MP3Transcode(BaseResource):
     @app.require_oauth("transcode-to-mp3")
     def post(self):
-        content = _get_request_body()
-        _check_valid_content(content, ["audio/"])
+        content = self._get_request_body()
+        self._check_valid_content(content, ["audio/"])
         if content["mimetype"] == "audio/mpeg":
             abort(400, message=f'{content["mediafile"]["filename"]} is already an mp3')
         try:
@@ -58,11 +39,11 @@ class MP3Transcode(Resource):
         )
 
 
-class MP4Transcode(Resource):
+class MP4Transcode(BaseResource):
     @app.require_oauth("transcode-to-mp4")
     def post(self):
-        content = _get_request_body()
-        _check_valid_content(content, ["video/"])
+        content = self._get_request_body()
+        self._check_valid_content(content, ["video/"])
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
             transcoder.transcode_from_disk(mp4=True)
@@ -74,11 +55,11 @@ class MP4Transcode(Resource):
         )
 
 
-class WidthHeightTranscode(Resource):
+class WidthHeightTranscode(BaseResource):
     @app.require_oauth("transcode-add-width-height")
     def post(self):
-        content = _get_request_body()
-        _check_valid_content(content, ["image/", "video/"])
+        content = self._get_request_body()
+        self._check_valid_content(content, ["image/", "video/"])
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
             if "image/" in content["mimetype"]:
