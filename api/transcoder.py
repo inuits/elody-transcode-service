@@ -30,7 +30,7 @@ class Transcoder:
     def __get_file(self):
         req = requests.get(self.url, headers=self.headers)
         if req.status_code != 200:
-            raise Exception(req.json())
+            raise Exception(req.text.strip())
         return req.content
 
     def __patch_mediafile(self, payload):
