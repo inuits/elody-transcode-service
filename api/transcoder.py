@@ -18,6 +18,15 @@ class Transcoder:
         self.storage_api_url = os.getenv("STORAGE_API_URL")
         self.url = url
 
+    def __add_video_width_height(self, file_path):
+        c = Converter()
+        info = c.probe(file_path)
+        data = {
+            "img_width": info.video.video_width,
+            "img_height": info.video.video_height,
+        }
+        self.__patch_mediafile(data)
+
     def __get_file(self):
         req = requests.get(self.url, headers=self.headers)
         if req.status_code != 200:
@@ -32,6 +41,38 @@ class Transcoder:
         )
         if req.status_code != 201:
             raise Exception(req.json())
+
+    def __transcode_to_mp3(self, temp_dir, file_path, new_file_name):
+        write_location = os.path.join(temp_dir, new_file_name)
+        sound = pydub.AudioSegment.from_file(file_path)
+        sound.export(write_location, format="mp3")
+        with open(write_location, "rb") as write_file:
+            self.__upload_transcode(new_file_name, write_file.read())
+
+    def __transcode_to_mp4(self, temp_dir, file_path, new_file_name):
+        write_location = os.path.join(temp_dir, new_file_name)
+        c = Converter()
+        info = c.probe(file_path)
+        opts = {
+            "format": "mp4",
+            "video": {
+                "codec": "h264",
+                "width": info.video.video_width,
+                "height": info.video.video_height,
+                "fps": info.video.video_fps,
+            },
+        }
+        if info.audio:
+            opts["audio"] = {
+                "codec": "aac",
+                "samplerate": info.audio.audio_samplerate,
+                "channels": info.audio.audio_channels,
+            }
+        conv = c.convert(file_path, write_location, opts, timeout=0)
+        for _ in conv:
+            pass
+        with open(write_location, "rb") as write_file:
+            self.__upload_transcode(new_file_name, write_file.read())
 
     def __upload_transcode(self, file_name, file_bytes):
         req = requests.post(
@@ -49,18 +90,18 @@ class Transcoder:
             raise Exception("Could not get width and/or height")
         self.__patch_mediafile(data)
 
-    def add_video_width_height(self):
+    def transcode_from_disk(self, video_width_height=False, mp3=False, mp4=False):
         with tempfile.TemporaryDirectory() as temp_dir:
             read_location = os.path.join(temp_dir, self.mediafile["filename"])
             with open(read_location, "wb") as read_file:
                 read_file.write(self.__get_file())
-            c = Converter()
-            info = c.probe(read_location)
-            data = {
-                "img_width": info.video.video_width,
-                "img_height": info.video.video_height,
-            }
-        self.__patch_mediafile(data)
+            new_file_name = f'{os.path.splitext(self.mediafile["original_filename"])[0]}{".mp3" if mp3 else ".mp4"}'
+            if video_width_height:
+                self.__add_video_width_height(read_location)
+            elif mp3:
+                self.__transcode_to_mp3(temp_dir, read_location, new_file_name)
+            elif mp4:
+                self.__transcode_to_mp4(temp_dir, read_location, new_file_name)
 
     def transcode_to_jpeg(self):
         with Image.open(io.BytesIO(self.__get_file())) as img:
@@ -71,49 +112,3 @@ class Transcoder:
         file_name = f'{os.path.splitext(self.mediafile["original_filename"])[0]}.jpg'
         self.__upload_transcode(file_name, new_bytes)
         out_img.close()
-
-    def transcode_to_mp3(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            read_location = os.path.join(temp_dir, self.mediafile["filename"])
-            with open(read_location, "wb") as read_file:
-                read_file.write(self.__get_file())
-            new_file_name = (
-                f'{os.path.splitext(self.mediafile["original_filename"])[0]}.mp3'
-            )
-            write_location = os.path.join(temp_dir, new_file_name)
-            sound = pydub.AudioSegment.from_file(read_location)
-            sound.export(write_location, format="mp3")
-            with open(write_location, "rb") as write_file:
-                self.__upload_transcode(new_file_name, write_file.read())
-
-    def transcode_to_mp4(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            read_location = os.path.join(temp_dir, self.mediafile["filename"])
-            with open(read_location, "wb") as read_file:
-                read_file.write(self.__get_file())
-            new_file_name = (
-                f'{os.path.splitext(self.mediafile["original_filename"])[0]}.mp4'
-            )
-            write_location = os.path.join(temp_dir, new_file_name)
-            c = Converter()
-            info = c.probe(read_location)
-            opts = {
-                "format": "mp4",
-                "video": {
-                    "codec": "h264",
-                    "width": info.video.video_width,
-                    "height": info.video.video_height,
-                    "fps": info.video.video_fps,
-                },
-            }
-            if info.audio:
-                opts["audio"] = {
-                    "codec": "aac",
-                    "samplerate": info.audio.audio_samplerate,
-                    "channels": info.audio.audio_channels,
-                }
-            conv = c.convert(read_location, write_location, opts, timeout=0)
-            for _ in conv:
-                pass
-            with open(write_location, "rb") as write_file:
-                self.__upload_transcode(new_file_name, write_file.read())

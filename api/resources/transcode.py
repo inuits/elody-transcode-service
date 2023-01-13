@@ -49,7 +49,7 @@ class MP3Transcode(Resource):
             abort(400, message=f'{content["mediafile"]["filename"]} is already an mp3')
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
-            transcoder.transcode_to_mp3()
+            transcoder.transcode_from_disk(mp3=True)
         except Exception as ex:
             return str(ex), 400
         return (
@@ -65,7 +65,7 @@ class MP4Transcode(Resource):
         _check_valid_content(content, ["video/"])
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
-            transcoder.transcode_to_mp4()
+            transcoder.transcode_from_disk(mp4=True)
         except Exception as ex:
             return str(ex), 400
         return (
@@ -84,7 +84,7 @@ class WidthHeightTranscode(Resource):
             if "image/" in content["mimetype"]:
                 transcoder.add_image_width_height()
             else:
-                transcoder.add_video_width_height()
+                transcoder.transcode_from_disk(video_width_height=True)
         except Exception as ex:
             return str(ex), 400
         return (
