@@ -65,7 +65,7 @@ class Transcoder:
         for _ in conv:
             pass
         with open(write_location, "rb") as write_file:
-            self.__upload_transcode(new_file_name, write_file.read())
+            self.__upload_transcode(new_file_name, write_file)
 
     def __upload_transcode(self, file_name, file_bytes):
         req = requests.post(
