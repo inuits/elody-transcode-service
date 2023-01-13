@@ -40,7 +40,7 @@ class Transcoder:
             headers=self.headers,
         )
         if req.status_code != 201:
-            raise Exception(req.json())
+            raise Exception(req.text.strip())
 
     def __transcode_to_mp3(self, temp_dir, file_path, new_file_name):
         write_location = os.path.join(temp_dir, new_file_name)
