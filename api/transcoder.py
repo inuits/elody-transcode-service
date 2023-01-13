@@ -33,9 +33,12 @@ class Transcoder:
             raise Exception(req.text.strip())
         return req.content
 
+    def __get_raw_id(self, item):
+        return item.get("_key", item["_id"])
+
     def __patch_mediafile(self, payload):
         req = requests.patch(
-            f'{self.collection_api_url}/mediafiles/{self.mediafile.get("_key", self.mediafile["_id"])}',
+            f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(self.mediafile)}",
             json=payload,
             headers=self.headers,
         )
@@ -69,7 +72,7 @@ class Transcoder:
 
     def __upload_transcode(self, file_name, file_bytes):
         req = requests.post(
-            f'{self.storage_api_url}/upload/transcode?id={self.mediafile["_key"]}',
+            f"{self.storage_api_url}/upload/transcode?id={self.__get_raw_id(self.mediafile)}",
             files={"file": (file_name, file_bytes)},
             headers=self.headers,
         )
