@@ -81,7 +81,7 @@ class Transcoder:
             headers=self.headers,
         )
         if req.status_code != 201:
-            raise Exception(req.json())
+            raise Exception(req.text.strip())
 
     def add_image_width_height(self):
         with Image.open(io.BytesIO(self.__get_file())) as img:
