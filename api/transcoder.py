@@ -97,14 +97,14 @@ class Transcoder:
                 self.__transcode_to_mp4(temp_dir, read_location, output_filename)
 
     def transcode_to_jpeg(self):
-        with Image.open(io.BytesIO(self.__get_file())) as img:
-            out_img = ImageOps.exif_transpose(img).convert("RGB")
-        new_bytes = io.BytesIO()
-        out_img.save(new_bytes, "jpeg", quality=95)
-        new_bytes.seek(0)
-        file_name = f'{os.path.splitext(self.mediafile["original_filename"])[0]}.jpg'
-        self.__upload_transcode(file_name, new_bytes)
-        out_img.close()
+        with io.BytesIO(self.__get_file()) as input_file:
+            with Image.open(input_file) as src_img:
+                with ImageOps.exif_transpose(src_img).convert("RGB") as dst_img:
+                    with io.BytesIO() as output_file:
+                        dst_img.save(output_file, "jpeg", quality=95)
+                        output_file.seek(0)
+                        output_filename = f'{os.path.splitext(self.mediafile["original_filename"])[0]}.jpg'
+                        self.__upload_transcode(output_filename, output_file)
 
     def transcode_to_mp3(self):
         with io.BytesIO(self.__get_file()) as file:
