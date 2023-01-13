@@ -30,7 +30,7 @@ class MP3Transcode(BaseResource):
             abort(400, message=f'{content["mediafile"]["filename"]} is already an mp3')
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
-            transcoder.transcode_from_disk(mp3=True)
+            transcoder.transcode_to_mp3()
         except Exception as ex:
             return str(ex), 400
         return (

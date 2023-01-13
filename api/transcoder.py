@@ -42,13 +42,6 @@ class Transcoder:
         if req.status_code != 201:
             raise Exception(req.text.strip())
 
-    def __transcode_to_mp3(self, temp_dir, file_path, new_file_name):
-        write_location = os.path.join(temp_dir, new_file_name)
-        sound = pydub.AudioSegment.from_file(file_path)
-        sound.export(write_location, format="mp3")
-        with open(write_location, "rb") as write_file:
-            self.__upload_transcode(new_file_name, write_file.read())
-
     def __transcode_to_mp4(self, temp_dir, file_path, new_file_name):
         write_location = os.path.join(temp_dir, new_file_name)
         c = Converter()
@@ -90,18 +83,18 @@ class Transcoder:
             raise Exception("Could not get width and/or height")
         self.__patch_mediafile(data)
 
-    def transcode_from_disk(self, video_width_height=False, mp3=False, mp4=False):
+    def transcode_from_disk(self, video_width_height=False, mp4=False):
         with tempfile.TemporaryDirectory() as temp_dir:
             read_location = os.path.join(temp_dir, self.mediafile["filename"])
             with open(read_location, "wb") as read_file:
                 read_file.write(self.__get_file())
-            new_file_name = f'{os.path.splitext(self.mediafile["original_filename"])[0]}{".mp3" if mp3 else ".mp4"}'
             if video_width_height:
                 self.__add_video_width_height(read_location)
-            elif mp3:
-                self.__transcode_to_mp3(temp_dir, read_location, new_file_name)
             elif mp4:
-                self.__transcode_to_mp4(temp_dir, read_location, new_file_name)
+                output_filename = (
+                    f'{os.path.splitext(self.mediafile["original_filename"])[0]}.mp4'
+                )
+                self.__transcode_to_mp4(temp_dir, read_location, output_filename)
 
     def transcode_to_jpeg(self):
         with Image.open(io.BytesIO(self.__get_file())) as img:
@@ -112,3 +105,13 @@ class Transcoder:
         file_name = f'{os.path.splitext(self.mediafile["original_filename"])[0]}.jpg'
         self.__upload_transcode(file_name, new_bytes)
         out_img.close()
+
+    def transcode_to_mp3(self):
+        with io.BytesIO(self.__get_file()) as file:
+            sound = pydub.AudioSegment.from_file(file)
+        with io.BytesIO() as output_file:
+            sound.export(output_file, format="mp3")
+            output_filename = (
+                f'{os.path.splitext(self.mediafile["original_filename"])[0]}.mp3'
+            )
+            self.__upload_transcode(output_filename, output_file)
