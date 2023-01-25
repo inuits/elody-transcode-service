@@ -3,7 +3,7 @@ import app
 from transcoder import Transcoder
 
 
-def __should_process_message(data, mimetypes):
+def __is_malformed_message(data, mimetypes):
     if "mediafile" not in data or "mimetype" not in data or "url" not in data:
         return False
     if not any(x in data["mimetype"] for x in mimetypes):
@@ -14,7 +14,7 @@ def __should_process_message(data, mimetypes):
 @app.rabbit.queue("dams.file_uploaded")
 def transcode_add_width_height(routing_key, body, message_id):
     data = body["data"]
-    if not __should_process_message(data, ["image/", "video/"]):
+    if not __is_malformed_message(data, ["image/", "video/"]):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
@@ -32,7 +32,7 @@ def transcode_add_width_height(routing_key, body, message_id):
 @app.rabbit.queue("dams.file_uploaded")
 def transcode_to_jpeg(routing_key, body, message_id):
     data = body["data"]
-    if not __should_process_message(data, ["image/"]):
+    if not __is_malformed_message(data, ["image/"]):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
@@ -46,7 +46,7 @@ def transcode_to_jpeg(routing_key, body, message_id):
 def transcode_to_mp3(routing_key, body, message_id):
     data = body["data"]
     if (
-        not __should_process_message(data, ["audio/"])
+        not __is_malformed_message(data, ["audio/"])
         or data["mimetype"] == "audio/mpeg"
     ):
         return
@@ -61,7 +61,7 @@ def transcode_to_mp3(routing_key, body, message_id):
 @app.rabbit.queue("dams.file_uploaded")
 def transcode_to_mp4(routing_key, body, message_id):
     data = body["data"]
-    if not __should_process_message(data, ["video/"]):
+    if not __is_malformed_message(data, ["video/"]):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
