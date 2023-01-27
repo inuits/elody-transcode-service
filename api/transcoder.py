@@ -19,8 +19,7 @@ class Transcoder:
         self.url = url
 
     def __add_video_width_height(self, file_path):
-        c = Converter()
-        info = c.probe(file_path)
+        info = Converter().probe(file_path)
         data = {
             "img_width": info.video.video_width,
             "img_height": info.video.video_height,
@@ -64,8 +63,7 @@ class Transcoder:
                 "samplerate": info.audio.audio_samplerate,
                 "channels": info.audio.audio_channels,
             }
-        conv = c.convert(file_path, write_location, opts, timeout=0)
-        for _ in conv:
+        for _ in c.convert(file_path, write_location, opts, timeout=0):
             pass
         with open(write_location, "rb") as output_file:
             self.__upload_transcode(output_filename, output_file)
@@ -80,7 +78,10 @@ class Transcoder:
             raise Exception(req.text.strip())
 
     def add_image_width_height(self):
-        with Image.open(io.BytesIO(self.__get_file())) as img:
+        with (
+            io.BytesIO(self.__get_file()) as input_file,
+            Image.open(input_file) as img,
+        ):
             data = {"img_width": img.width, "img_height": img.height}
         if not data["img_width"] or not data["img_height"]:
             raise Exception("Could not get width and/or height")
@@ -89,8 +90,8 @@ class Transcoder:
     def transcode_from_disk(self, video_width_height=False, mp4=False):
         with tempfile.TemporaryDirectory() as temp_dir:
             read_location = os.path.join(temp_dir, self.mediafile["filename"])
-            with open(read_location, "wb") as read_file:
-                read_file.write(self.__get_file())
+            with open(read_location, "wb") as input_file:
+                input_file.write(self.__get_file())
             if video_width_height:
                 self.__add_video_width_height(read_location)
             elif mp4:
@@ -100,14 +101,18 @@ class Transcoder:
                 self.__transcode_to_mp4(temp_dir, read_location, output_filename)
 
     def transcode_to_jpeg(self):
-        with io.BytesIO(self.__get_file()) as input_file:
-            with Image.open(input_file) as src_img:
-                with ImageOps.exif_transpose(src_img).convert("RGB") as dst_img:
-                    with io.BytesIO() as output_file:
-                        dst_img.save(output_file, "jpeg", quality=95)
-                        output_file.seek(0)
-                        output_filename = f'{os.path.splitext(self.mediafile["original_filename"])[0]}.jpg'
-                        self.__upload_transcode(output_filename, output_file)
+        with (
+            io.BytesIO(self.__get_file()) as input_file,
+            Image.open(input_file) as src_img,
+            ImageOps.exif_transpose(src_img).convert("RGB") as dst_img,
+            io.BytesIO() as output_file,
+        ):
+            dst_img.save(output_file, "jpeg", quality=95)
+            output_file.seek(0)
+            output_filename = (
+                f'{os.path.splitext(self.mediafile["original_filename"])[0]}.jpg'
+            )
+            self.__upload_transcode(output_filename, output_file)
 
     def transcode_to_mp3(self):
         with io.BytesIO(self.__get_file()) as input_file:
