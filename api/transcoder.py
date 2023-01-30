@@ -2,6 +2,7 @@ import io
 import os
 import pydub
 import requests
+import shutil
 import tempfile
 
 from converter import Converter
@@ -26,11 +27,12 @@ class Transcoder:
         }
         self.__patch_mediafile(data)
 
-    def __get_file(self):
-        req = requests.get(self.url, headers=self.headers)
-        if req.status_code != 200:
-            raise Exception(req.text.strip())
-        return req.content
+    def __get_file(self, output):
+        with requests.get(self.url, headers=self.headers, stream=True) as req:
+            if req.status_code != 200:
+                raise Exception(req.text.strip())
+            shutil.copyfileobj(req.raw, output)
+        return output
 
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
@@ -79,7 +81,7 @@ class Transcoder:
 
     def add_image_width_height(self):
         with (
-            io.BytesIO(self.__get_file()) as input_file,
+            self.__get_file(io.BytesIO()) as input_file,
             Image.open(input_file) as img,
         ):
             data = {"img_width": img.width, "img_height": img.height}
@@ -91,7 +93,7 @@ class Transcoder:
         with tempfile.TemporaryDirectory() as temp_dir:
             read_location = os.path.join(temp_dir, self.mediafile["filename"])
             with open(read_location, "wb") as input_file:
-                input_file.write(self.__get_file())
+                self.__get_file(input_file)
             if video_width_height:
                 self.__add_video_width_height(read_location)
             elif mp4:
@@ -102,7 +104,7 @@ class Transcoder:
 
     def transcode_to_jpeg(self):
         with (
-            io.BytesIO(self.__get_file()) as input_file,
+            self.__get_file(io.BytesIO()) as input_file,
             Image.open(input_file) as src_img,
             ImageOps.exif_transpose(src_img).convert("RGB") as dst_img,
             io.BytesIO() as output_file,
@@ -115,7 +117,7 @@ class Transcoder:
             self.__upload_transcode(output_filename, output_file)
 
     def transcode_to_mp3(self):
-        with io.BytesIO(self.__get_file()) as input_file:
+        with self.__get_file(io.BytesIO()) as input_file:
             audio = pydub.AudioSegment.from_file(input_file)
         with io.BytesIO() as output_file:
             audio.export(output_file, format="mp3")
