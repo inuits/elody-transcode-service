@@ -27,12 +27,27 @@ class Transcoder:
         }
         self.__patch_mediafile(data)
 
+    def __get_exif_for_mediafile(self, mediafile):
+        artist = f'source: {self.__get_item_metadata_value(mediafile, "source")}'
+        if photographer := self.__get_item_metadata_value(mediafile, "photographer"):
+            artist = f"photographer: {photographer}, {artist}"
+        rights = f'license: {self.__get_item_metadata_value(mediafile, "rights")}'
+        if copyrights := self.__get_item_metadata_value(mediafile, "copyright"):
+            rights = f"rightsholder: {copyrights}, {rights}"
+        return artist, rights
+
     def __get_file(self, output):
         with requests.get(self.url, headers=self.headers, stream=True) as req:
             if req.status_code != 200:
                 raise Exception(req.text.strip())
             shutil.copyfileobj(req.raw, output)
         return output
+
+    def __get_item_metadata_value(self, item, key):
+        for entry in item["metadata"]:
+            if entry["key"] == key:
+                return entry["value"]
+        return False
 
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
@@ -121,7 +136,9 @@ class Transcoder:
             ImageOps.exif_transpose(src_img).convert("RGB") as dst_img,
             io.BytesIO() as output_file,
         ):
-            dst_img.save(output_file, "jpeg", quality=95)
+            exif = dst_img.getexif()
+            exif[0x013B], exif[0x8298] = self.__get_exif_for_mediafile(self.mediafile)
+            dst_img.save(output_file, "jpeg", quality=95, exif=exif)
             output_file.seek(0)
             output_filename = (
                 f'{os.path.splitext(self.mediafile["original_filename"])[0]}.jpg'
