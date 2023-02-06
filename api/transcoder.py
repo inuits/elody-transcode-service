@@ -6,7 +6,7 @@ import shutil
 import tempfile
 
 from converter import Converter
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, TiffImagePlugin
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -136,7 +136,8 @@ class Transcoder:
             ImageOps.exif_transpose(src_img).convert("RGB") as dst_img,
             io.BytesIO() as output_file,
         ):
-            exif = dst_img.getexif()
+            exif = src_img.getexif()
+            del exif[TiffImagePlugin.STRIPOFFSETS]
             exif[0x013B], exif[0x8298] = self.__get_exif_for_mediafile(self.mediafile)
             dst_img.save(output_file, "jpeg", quality=95, exif=exif)
             output_file.seek(0)
