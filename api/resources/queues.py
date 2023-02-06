@@ -19,9 +19,9 @@ def transcode_add_width_height(routing_key, body, message_id):
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
         if "image/" in data["mediafile"]["mimetype"]:
-            transcoder.add_image_width_height()
+            transcoder.transcode("width_height_image")
         else:
-            transcoder.transcode_from_disk(video_width_height=True)
+            transcoder.transcode("width_height_video")
     except Exception as ex:
         message = (
             f'Adding dimensions for {data["mediafile"]["filename"]} failed with: {ex}'
@@ -36,7 +36,7 @@ def transcode_to_jpeg(routing_key, body, message_id):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
-        transcoder.transcode_to_jpeg()
+        transcoder.transcode("jpg")
     except Exception as ex:
         message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
         app.logger.error(message)
@@ -49,7 +49,7 @@ def transcode_to_mp3(routing_key, body, message_id):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
-        transcoder.transcode_from_disk(mp3=True)
+        transcoder.transcode("mp3")
     except Exception as ex:
         message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
         app.logger.error(message)
@@ -62,7 +62,7 @@ def transcode_to_mp4(routing_key, body, message_id):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
-        transcoder.transcode_from_disk(mp4=True)
+        transcoder.transcode("mp4")
     except Exception as ex:
         message = f'Transcoding {data["mediafile"]["filename"]} failed with: {ex}'
         app.logger.error(message)
