@@ -5,10 +5,10 @@ from flask_restful import abort, Resource
 from transcoder import Transcoder
 
 
-def _check_valid_content(content, mimetypes):
-    if any(x not in content for x in ["mediafile", "mimetype", "url"]):
+def _is_malformed_message(data, fields, mimetypes):
+    if not all(x in data for x in fields):
         abort(405, message="Malformed request body")
-    if not any(x in content["mimetype"] for x in mimetypes):
+    if not any(x in data["mediafile"]["mimetype"] for x in mimetypes):
         abort(405, message="Mimetype not allowed")
 
 
@@ -22,10 +22,10 @@ class JpegTranscode(Resource):
     @app.require_oauth("transcode-to-jpeg")
     def post(self):
         content = _get_request_body()
-        _check_valid_content(content, ["image/"])
+        _is_malformed_message(content, ["image/"])
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
-            transcoder.transcode_to_jpeg()
+            transcoder.transcode("jpg")
         except Exception as ex:
             return str(ex), 400
         return (
@@ -38,12 +38,12 @@ class MP3Transcode(Resource):
     @app.require_oauth("transcode-to-mp3")
     def post(self):
         content = _get_request_body()
-        _check_valid_content(content, ["audio/"])
+        _is_malformed_message(content, ["audio/"])
         if content["mimetype"] == "audio/mpeg":
             abort(400, message=f'{content["mediafile"]["filename"]} is already an mp3')
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
-            transcoder.transcode_from_disk(mp3=True)
+            transcoder.transcode("mp3")
         except Exception as ex:
             return str(ex), 400
         return (
@@ -56,10 +56,10 @@ class MP4Transcode(Resource):
     @app.require_oauth("transcode-to-mp4")
     def post(self):
         content = _get_request_body()
-        _check_valid_content(content, ["video/"])
+        _is_malformed_message(content, ["video/"])
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
-            transcoder.transcode_from_disk(mp4=True)
+            transcoder.transcode("mp4")
         except Exception as ex:
             return str(ex), 400
         return (
@@ -72,13 +72,10 @@ class WidthHeightTranscode(Resource):
     @app.require_oauth("transcode-add-width-height")
     def post(self):
         content = _get_request_body()
-        _check_valid_content(content, ["image/", "video/"])
+        _is_malformed_message(content, ["image/", "video/"])
         try:
             transcoder = Transcoder(content["mediafile"], content["url"])
-            if "image/" in content["mimetype"]:
-                transcoder.add_image_width_height()
-            else:
-                transcoder.transcode_from_disk(video_width_height=True)
+            transcoder.transcode("width_height")
         except Exception as ex:
             return str(ex), 400
         return (
