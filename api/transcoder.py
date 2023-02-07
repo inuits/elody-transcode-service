@@ -92,7 +92,7 @@ class Transcoder:
             )
             with open(read_location, "wb") as input_file:
                 self.__get_file(input_file)
-            func = operations.get(operation, None)
+            func = operations.get(operation)
             if not func:
                 raise Exception(f"Operation {operation} not supported")
             func(read_location, write_location)
