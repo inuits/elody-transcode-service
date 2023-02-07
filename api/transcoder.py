@@ -62,9 +62,7 @@ class Transcoder:
             raise Exception(req.text.strip())
 
     def add_width_height(self, read_location, write_location):
-        if all(x not in self.mediafile["mimetype"] for x in ["image/", "video/"]):
-            return
-        elif "image/" in self.mediafile["mimetype"]:
+        if "image/" in self.mediafile["mimetype"]:
             with Image.open(read_location) as img:
                 data = {"img_width": img.width, "img_height": img.height}
         else:

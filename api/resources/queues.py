@@ -3,18 +3,21 @@ import app
 from transcoder import Transcoder
 
 
-def __is_malformed_message(data, mimetypes):
-    if "mediafile" not in data or "mimetype" not in data or "url" not in data:
-        return False
-    if not any(x in data["mimetype"] for x in mimetypes):
-        return False
-    return True
+def __is_malformed_message(data, fields, mimetypes):
+    if not all(x in data for x in fields):
+        app.logger.error(f"Message malformed: missing one of {fields}")
+        return True
+    if not any(x in data["mediafile"]["mimetype"] for x in mimetypes):
+        return True
+    return False
 
 
 @app.rabbit.queue("dams.file_uploaded")
 def transcode_add_width_height(routing_key, body, message_id):
     data = body["data"]
-    if not __is_malformed_message(data, ["image/", "video/"]):
+    if __is_malformed_message(
+        data, ["mediafile", "mimetype", "url"], ["image/", "video/"]
+    ):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
@@ -29,7 +32,7 @@ def transcode_add_width_height(routing_key, body, message_id):
 @app.rabbit.queue("dams.file_uploaded")
 def transcode_to_jpeg(routing_key, body, message_id):
     data = body["data"]
-    if not __is_malformed_message(data, ["image/"]):
+    if __is_malformed_message(data, ["mediafile", "mimetype", "url"], ["image/"]):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
@@ -42,7 +45,10 @@ def transcode_to_jpeg(routing_key, body, message_id):
 @app.rabbit.queue("dams.file_uploaded")
 def transcode_to_mp3(routing_key, body, message_id):
     data = body["data"]
-    if not __is_malformed_message(data, ["audio/"]) or data["mimetype"] == "audio/mpeg":
+    if (
+        __is_malformed_message(data, ["mediafile", "mimetype", "url"], ["audio/"])
+        or data["mimetype"] == "audio/mpeg"
+    ):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
@@ -55,7 +61,7 @@ def transcode_to_mp3(routing_key, body, message_id):
 @app.rabbit.queue("dams.file_uploaded")
 def transcode_to_mp4(routing_key, body, message_id):
     data = body["data"]
-    if not __is_malformed_message(data, ["video/"]):
+    if __is_malformed_message(data, ["mediafile", "mimetype", "url"], ["video/"]):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
