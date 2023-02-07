@@ -61,19 +61,20 @@ class Transcoder:
         if req.status_code != 201:
             raise Exception(req.text.strip())
 
-    def add_image_width_height(self, read_location, write_location):
-        with Image.open(read_location) as img:
-            data = {"img_width": img.width, "img_height": img.height}
+    def add_width_height(self, read_location, write_location):
+        if all(x not in self.mediafile["mimetype"] for x in ["image/", "video/"]):
+            return
+        elif "image/" in self.mediafile["mimetype"]:
+            with Image.open(read_location) as img:
+                data = {"img_width": img.width, "img_height": img.height}
+        else:
+            info = Converter().probe(read_location)
+            data = {
+                "img_width": info.video.video_width,
+                "img_height": info.video.video_height,
+            }
         if not data["img_width"] or not data["img_height"]:
             raise Exception("Could not get width and/or height")
-        self.__patch_mediafile(data)
-
-    def add_video_width_height(self, read_location, write_location):
-        info = Converter().probe(read_location)
-        data = {
-            "img_width": info.video.video_width,
-            "img_height": info.video.video_height,
-        }
         self.__patch_mediafile(data)
 
     def transcode(self, operation):
@@ -81,8 +82,7 @@ class Transcoder:
             "jpg": self.transcode_to_jpeg,
             "mp3": self.transcode_to_mp3,
             "mp4": self.transcode_to_mp4,
-            "width_height_image": self.add_image_width_height,
-            "width_height_video": self.add_video_width_height,
+            "width_height": self.add_width_height,
         }
         with tempfile.TemporaryDirectory() as temp_dir:
             read_location = os.path.join(temp_dir, self.mediafile["filename"])
@@ -96,7 +96,7 @@ class Transcoder:
             if not func:
                 raise Exception(f"Operation {operation} not supported")
             func(read_location, write_location)
-            if "width_height" in operation:
+            if operation == "width_height":
                 return
             with open(write_location, "rb") as output_file:
                 self.__upload_transcode(os.path.basename(write_location), output_file)

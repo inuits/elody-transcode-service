@@ -18,10 +18,7 @@ def transcode_add_width_height(routing_key, body, message_id):
         return
     try:
         transcoder = Transcoder(data["mediafile"], data["url"])
-        if "image/" in data["mediafile"]["mimetype"]:
-            transcoder.transcode("width_height_image")
-        else:
-            transcoder.transcode("width_height_video")
+        transcoder.transcode("width_height")
     except Exception as ex:
         message = (
             f'Adding dimensions for {data["mediafile"]["filename"]} failed with: {ex}'
