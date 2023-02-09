@@ -32,7 +32,6 @@ class Transcoder:
             if req.status_code != 200:
                 raise Exception(req.text.strip())
             shutil.copyfileobj(req.raw, output)
-        return output
 
     def __get_item_metadata_value(self, item, key):
         for entry in item["metadata"]:
