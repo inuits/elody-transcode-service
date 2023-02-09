@@ -101,7 +101,8 @@ class Transcoder:
     def transcode_to_jpeg(self, read_location, write_location):
         with Image.open(read_location) as src_img:
             exif = src_img.getexif()
-            del exif[TiffImagePlugin.STRIPOFFSETS]
+            if TiffImagePlugin.STRIPOFFSETS in exif:
+                del exif[TiffImagePlugin.STRIPOFFSETS]
             exif[0x013B], exif[0x8298] = self.__get_exif_for_mediafile(self.mediafile)
             with ImageOps.exif_transpose(src_img).convert("RGB") as dst_img:
                 dst_img.save(write_location, quality=95, exif=exif)
