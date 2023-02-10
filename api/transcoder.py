@@ -6,6 +6,7 @@ import tempfile
 
 from converter import Converter
 from PIL import Image, ImageOps, TiffImagePlugin
+from PIL.ExifTags import Base
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -103,7 +104,8 @@ class Transcoder:
             exif = src_img.getexif()
             if TiffImagePlugin.STRIPOFFSETS in exif:
                 del exif[TiffImagePlugin.STRIPOFFSETS]
-            exif[0x013B], exif[0x8298] = self.__get_exif_for_mediafile(self.mediafile)
+            exif_values = self.__get_exif_for_mediafile(self.mediafile)
+            exif[Base.Artist.value], exif[Base.Copyright.value] = exif_values
             with ImageOps.exif_transpose(src_img).convert("RGB") as dst_img:
                 dst_img.save(write_location, quality=95, exif=exif)
 
