@@ -107,11 +107,8 @@ class Transcoder:
             with ImageOps.exif_transpose(src_img).convert("RGB") as dst_img:
                 try:
                     dst_img.save(write_location, quality=95, exif=exif)
-                # FIXME: change to ValueError once next Pillow release is live
-                # Ref: https://github.com/python-pillow/Pillow/issues/6932
-                except OSError:
+                except Exception:
                     exif.clear()
-                    exif_values = self.__get_exif_for_mediafile(self.mediafile)
                     exif[ExifTags.Base.Artist] = exif_values[0]
                     exif[ExifTags.Base.Copyright] = exif_values[1]
                     dst_img.save(write_location, quality=95, exif=exif)
