@@ -5,8 +5,7 @@ import shutil
 import tempfile
 
 from converter import Converter
-from PIL import Image, ImageOps, TiffImagePlugin
-from PIL.ExifTags import Base
+from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -103,11 +102,19 @@ class Transcoder:
         with Image.open(read_location) as src_img:
             exif = src_img.getexif()
             exif.pop(TiffImagePlugin.STRIPOFFSETS, None)
-            exif.pop(TiffImagePlugin.ICCPROFILE, None)
             exif_values = self.__get_exif_for_mediafile(self.mediafile)
-            exif[Base.Artist.value], exif[Base.Copyright.value] = exif_values
+            exif[ExifTags.Base.Artist], exif[ExifTags.Base.Copyright] = exif_values
             with ImageOps.exif_transpose(src_img).convert("RGB") as dst_img:
-                dst_img.save(write_location, quality=95, exif=exif)
+                try:
+                    dst_img.save(write_location, quality=95, exif=exif)
+                # FIXME: change to ValueError once next Pillow release is live
+                # Ref: https://github.com/python-pillow/Pillow/issues/6932
+                except OSError:
+                    exif.clear()
+                    exif_values = self.__get_exif_for_mediafile(self.mediafile)
+                    exif[ExifTags.Base.Artist] = exif_values[0]
+                    exif[ExifTags.Base.Copyright] = exif_values[1]
+                    dst_img.save(write_location, quality=95, exif=exif)
 
     def transcode_to_mp3(self, read_location, write_location):
         audio = pydub.AudioSegment.from_file(read_location)
