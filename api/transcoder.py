@@ -1,3 +1,4 @@
+import app
 import os
 import pydub
 import requests
@@ -107,11 +108,12 @@ class Transcoder:
             with ImageOps.exif_transpose(src_img).convert("RGB") as dst_img:
                 try:
                     dst_img.save(write_location, quality=95, exif=exif)
-                except Exception:
+                except Exception as ex:
                     exif.clear()
                     exif[ExifTags.Base.Artist] = exif_values[0]
                     exif[ExifTags.Base.Copyright] = exif_values[1]
                     dst_img.save(write_location, quality=95, exif=exif)
+                    app.logger.info(f"First conversion failed with: {ex}")
 
     def transcode_to_mp3(self, read_location, write_location):
         audio = pydub.AudioSegment.from_file(read_location)
