@@ -73,31 +73,42 @@ class Transcoder:
             raise Exception("Could not get width and/or height")
         self.__patch_mediafile(mediafile, data)
 
-    def transcode(self, mediafile, url, operation):
-        operations = {
-            "jpg": self.transcode_to_jpeg,
-            "mp3": self.transcode_to_mp3,
-            "mp4": self.transcode_to_mp4,
-            "width_height": self.add_width_height,
-        }
+    def transcode(self, mediafile, url, operation_name):
         with tempfile.TemporaryDirectory() as temp_dir:
             read_location = os.path.join(temp_dir, mediafile["filename"])
             write_location = os.path.join(
                 temp_dir,
-                f'{os.path.splitext(mediafile["original_filename"])[0]}.{operation}',
+                f'{os.path.splitext(mediafile["original_filename"])[0]}.{operation_name}',
             )
             with open(read_location, "wb") as input_file:
                 self.__get_file(url, input_file)
-            func = operations.get(operation)
-            if not func:
-                raise Exception(f"Operation {operation} not supported")
-            func(read_location, write_location)
-            if operation == "width_height":
-                return
-            with open(write_location, "rb") as output_file:
-                self.__upload_transcode(
-                    mediafile, os.path.basename(write_location), output_file
-                )
+            operation = {
+                "jpg": {
+                    "func": self.transcode_to_jpeg,
+                    "args": [mediafile, read_location, write_location],
+                },
+                "mp3": {
+                    "func": self.transcode_to_mp3,
+                    "args": [read_location, write_location],
+                },
+                "mp4": {
+                    "func": self.transcode_to_mp4,
+                    "args": [read_location, write_location],
+                },
+                "width_height": {
+                    "func": self.add_width_height,
+                    "args": [mediafile, read_location],
+                    "upload": False,
+                },
+            }.get(operation_name)
+            if not operation:
+                raise Exception(f"Operation {operation_name} not supported")
+            operation["func"](*operation["args"])
+            if operation.get("upload", True):
+                with open(write_location, "rb") as output_file:
+                    self.__upload_transcode(
+                        mediafile, os.path.basename(write_location), output_file
+                    )
 
     def transcode_to_jpeg(self, mediafile, read_location, write_location):
         with Image.open(read_location) as src_img:
