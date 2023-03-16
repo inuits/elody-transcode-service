@@ -80,8 +80,6 @@ class Transcoder:
                 temp_dir,
                 f'{os.path.splitext(mediafile["original_filename"])[0]}.{operation_name}',
             )
-            with open(read_location, "wb") as input_file:
-                self.__get_file(url, input_file)
             operation = {
                 "jpg": {
                     "func": self.transcode_to_jpeg,
@@ -103,6 +101,8 @@ class Transcoder:
             }.get(operation_name)
             if not operation:
                 raise Exception(f"Operation {operation_name} not supported")
+            with open(read_location, "wb") as input_file:
+                self.__get_file(url, input_file)
             operation["func"](*operation["args"])
             if operation.get("upload", True):
                 with open(write_location, "rb") as output_file:
