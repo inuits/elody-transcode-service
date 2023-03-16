@@ -25,8 +25,7 @@ class BaseTranscode(Resource):
         if operation == "mp3" and content["mimetype"] == "audio/mpeg":
             abort(400, message=f'{content["mediafile"]["filename"]} is already an mp3')
         try:
-            transcoder = Transcoder(content["mediafile"], content["url"])
-            transcoder.transcode(operation)
+            Transcoder().transcode(content["mediafile"], content["url"], operation)
         except Exception as ex:
             return str(ex), 400
         return message.format(content["mediafile"]["filename"]), 201
