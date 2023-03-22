@@ -7,6 +7,8 @@ from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
 from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
+from inuits_policy_based_auth import PolicyFactory
+from policy_loader import load_policies
 from rabbitmq_pika_flask import RabbitMQ
 
 if os.getenv("SENTRY_ENABLED", False) in ["True", "true", True]:
@@ -63,6 +65,9 @@ validator = JWTValidator(
 require_oauth.register_token_validator(validator)
 
 app.register_blueprint(swaggerui_blueprint)
+
+policy_factory = PolicyFactory(logger)
+load_policies(policy_factory)
 
 
 def rabbit_available():
