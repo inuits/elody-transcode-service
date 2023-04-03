@@ -125,6 +125,8 @@ class Transcoder(metaclass=Singleton):
             exif.pop(TiffImagePlugin.STRIPOFFSETS, None)
             exif_values = self.__get_exif_for_mediafile(mediafile)
             exif[ExifTags.Base.Artist], exif[ExifTags.Base.Copyright] = exif_values
+            if src_img.mode == "I;16":
+                src_img = src_img.point(lambda i: i * (1 / 255))
             with ImageOps.exif_transpose(src_img).convert("RGB") as dst_img:
                 try:
                     dst_img.save(write_location, quality=95, exif=exif)
