@@ -17,6 +17,7 @@ fi
 if [ "$APP_ENV" = "dev" ]; then
   echo "Starting development server..."
   export FLASK_ENV=development
+  export FLASK_DEBUG='1'
   cd ~/api
   exec ~/.local/bin/flask run --host=0.0.0.0
 else

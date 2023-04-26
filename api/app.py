@@ -31,8 +31,6 @@ app.config.update(
         "MQ_EXCHANGE": os.getenv("RABMQ_SEND_EXCHANGE_NAME"),
         "MQ_URL": os.getenv("RABMQ_RABBITMQ_URL"),
         "SECRET_KEY": "SomethingNotEntirelySecret",
-        "TESTING": True,
-        "DEBUG": True,
     }
 )
 
@@ -92,4 +90,4 @@ api.add_resource(MP4Transcode, "/transcode/mp4")
 api.add_resource(WidthHeightTranscode, "/transcode/widthheight")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
