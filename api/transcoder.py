@@ -26,14 +26,27 @@ class Transcoder(metaclass=Singleton):
         self.headers = {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
         self.storage_api_url = os.getenv("STORAGE_API_URL")
 
+    def __add_artist_and_copyright_to_exif(self, exif, artist, copyrights):
+        if artist:
+            exif[ExifTags.Base.Artist] = artist
+        if copyrights:
+            exif[ExifTags.Base.Copyright] = copyrights
+
     def __get_exif_for_mediafile(self, mediafile):
-        artist = f'source: {self.__get_item_metadata_value(mediafile, "source")}'
+        artist, copyrights = list(), list()
         if photographer := self.__get_item_metadata_value(mediafile, "photographer"):
-            artist = f"photographer: {photographer}, {artist}"
-        rights = f'license: {self.__get_item_metadata_value(mediafile, "rights")}'
-        if copyrights := self.__get_item_metadata_value(mediafile, "copyright"):
-            rights = f"rightsholder: {copyrights}, {rights}"
-        return artist, rights
+            artist.append(f"photographer: {photographer}")
+        if source := self.__get_item_metadata_value(mediafile, "source"):
+            artist.append(f"source: {source}")
+        if copyright := self.__get_item_metadata_value(mediafile, "copyright"):
+            copyrights.append(f"rightsholder: {copyright}")
+        if rights := self.__get_item_metadata_value(mediafile, "rights"):
+            copyrights.append(f"license: {rights}")
+        if artist:
+            artist = ", ".join(artist)
+        if copyrights:
+            copyrights = ", ".join(copyrights)
+        return artist, copyrights
 
     def __get_file(self, url, output):
         with requests.get(url, headers=self.headers, stream=True) as req:
@@ -42,10 +55,10 @@ class Transcoder(metaclass=Singleton):
             shutil.copyfileobj(req.raw, output)
 
     def __get_item_metadata_value(self, item, key):
-        for entry in item["metadata"]:
+        for entry in item.get("metadata", []):
             if entry["key"] == key:
                 return entry["value"]
-        return False
+        return None
 
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
@@ -123,8 +136,8 @@ class Transcoder(metaclass=Singleton):
         with Image.open(read_location) as src_img:
             exif = src_img.getexif()
             exif.pop(TiffImagePlugin.STRIPOFFSETS, None)
-            exif_values = self.__get_exif_for_mediafile(mediafile)
-            exif[ExifTags.Base.Artist], exif[ExifTags.Base.Copyright] = exif_values
+            artist, copyrights = self.__get_exif_for_mediafile(mediafile)
+            self.__add_artist_and_copyright_to_exif(exif, artist, copyrights)
             if src_img.mode == "I;16":
                 src_img = src_img.point(lambda i: i * (1 / 255))
             with ImageOps.exif_transpose(src_img).convert("RGB") as dst_img:
@@ -132,8 +145,7 @@ class Transcoder(metaclass=Singleton):
                     dst_img.save(write_location, quality=95, exif=exif)
                 except Exception as ex:
                     exif.clear()
-                    exif[ExifTags.Base.Artist] = exif_values[0]
-                    exif[ExifTags.Base.Copyright] = exif_values[1]
+                    self.__add_artist_and_copyright_to_exif(exif, artist, copyrights)
                     dst_img.save(write_location, quality=95, exif=exif)
                     app.logger.info(f"First conversion failed with: {ex}")
 
