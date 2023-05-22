@@ -7,11 +7,8 @@ include:
   - project: 'inuits/gitlab-ci/pipeline-templates'
     file: 'pip-pipeline.yml'
     ref: 'v1.6.2'
-  - project: 'rnd/inuits/dams/pipeline-deploy-targets'
-    file: 'extra-targets.yml'
-    ref: 'main'
-    
+
 variables:
   CUSTOMER: 'inuits'
   APPLICATION: 'dams-base-transcoder'
-  SKIP_DEPLOY: 'true' # This pipeline does not provide a deploy, if a deploy is needed, you can add it to the deploy targets mentioned in the includes
+  SKIP_DEPLOY: 'true'
