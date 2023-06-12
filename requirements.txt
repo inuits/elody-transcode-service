@@ -30,4 +30,4 @@ sentry-sdk[flask]==0.10.2
 six==1.16.0
 urllib3==1.26.15
 git+https://github.com/UbiCastTeam/python-video-converter.git
-Werkzeug==2.3.4
+Werkzeug==2.3.6
