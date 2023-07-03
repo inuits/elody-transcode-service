@@ -140,7 +140,8 @@ class Transcoder(metaclass=Singleton):
             self.__add_artist_and_copyright_to_exif(exif, artist, copyrights)
             if src_img.mode == "I;16":
                 src_img = src_img.point(lambda i: i * (1 / 255))
-            with ImageOps.exif_transpose(src_img).convert("RGB") as dst_img:
+            ImageOps.exif_transpose(src_img, in_place=True)
+            with src_img.convert("RGB") as dst_img:
                 try:
                     dst_img.save(write_location, quality=95, exif=exif)
                 except Exception as ex:
