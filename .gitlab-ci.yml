@@ -6,7 +6,7 @@
 include:
   - project: 'inuits/gitlab-ci/pipeline-templates'
     file: 'pip-pipeline.yml'
-    ref: 'v1.6.3'
+    ref: 'v1.7.0'
   - project: 'customers/coghent/infra/coghent-infra-gitlab-templates'
     file: 'common-pipeline.yml'
     ref: 'master'
