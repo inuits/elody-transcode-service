@@ -10,6 +10,9 @@ include:
   - project: 'customers/coghent/infra/coghent-infra-gitlab-templates'
     file: 'common-pipeline.yml'
     ref: 'master'
+  - project: 'customers/digipolis/infra/digipolis-infra-gitlab-templates'
+    file: 'common-pipeline.yml'
+    ref: 'main'
 
 variables:
   CUSTOMER: 'inuits'
