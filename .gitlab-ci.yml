@@ -15,3 +15,4 @@ variables:
   CUSTOMER: 'inuits'
   APPLICATION: 'dams-base-transcoder'
   SKIP_DEPLOY: 'true'
+  TARGETS: 'coghent,digipolis-dams'
