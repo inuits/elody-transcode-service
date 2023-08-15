@@ -12,7 +12,7 @@ include:
     ref: 'master'
 
 variables:
-  CUSTOMER: 'inuits'
   APPLICATION: 'dams-base-transcoder'
-  SKIP_DEPLOY: 'true'
+  CUSTOMER: 'inuits'
+
   TARGETS: 'coghent,digipolis-dams'
