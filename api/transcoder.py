@@ -7,6 +7,7 @@ import tempfile
 
 from converter import Converter
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
+from urllib.parse import urlparse
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -48,11 +49,16 @@ class Transcoder(metaclass=Singleton):
             copyrights = ", ".join(copyrights)
         return artist, copyrights
 
-    def __get_file(self, url, output):
-        with requests.get(url, headers=self.headers, stream=True) as req:
+    def __get_file(self, url, output, headers=None):
+        with requests.get(url, headers=self.__get_headers(headers), stream=True) as req:
             if req.status_code != 200:
                 raise Exception(req.text.strip())
             shutil.copyfileobj(req.raw, output)
+
+    def __get_headers(self, headers=None):
+        if headers and isinstance(headers, dict):
+            return {**self.headers, **headers}
+        return self.headers
 
     def __get_item_metadata_value(self, item, key):
         for entry in item.get("metadata", []):
@@ -60,28 +66,46 @@ class Transcoder(metaclass=Singleton):
                 return entry["value"]
         return None
 
+    def __get_mediafile_download_link(self, mediafile, headers=None):
+        req = requests.get(
+            f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
+            headers=self.__get_headers(headers),
+        )
+        if req.status_code != 200:
+            raise Exception(req.text.strip())
+        parsed_uri = urlparse(req.json().get("original_file_location"))
+        return f"{self.storage_api_url}{parsed_uri.path}?{parsed_uri.query}"
+
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
 
-    def __patch_mediafile(self, mediafile, payload):
+    def __patch_mediafile(self, mediafile, payload, headers):
         req = requests.patch(
             f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
             json=payload,
-            headers=self.headers,
+            headers=self.__get_headers(headers),
         )
         if req.status_code != 201:
             raise Exception(req.text.strip())
 
-    def __upload_transcode(self, mediafile, file_name, file_bytes):
+    def __upload_transcode(self, mediafile, file_name, file_bytes, headers=None):
         req = requests.post(
-            f"{self.storage_api_url}/upload/transcode?id={self.__get_raw_id(mediafile)}",
+            f"{self.collection_api_url}/tickets",
+            json={"filename": file_name},
+            headers=self.__get_headers(headers),
+        )
+        if req.status_code != 201:
+            raise Exception(req.text.strip())
+        ticket_id = req.text.strip().replace('"', "")
+        req = requests.post(
+            f"{self.storage_api_url}/upload/transcode?id={self.__get_raw_id(mediafile)}&ticket_id={ticket_id}",
             files={"file": (file_name, file_bytes)},
-            headers=self.headers,
+            headers=self.__get_headers(headers),
         )
         if req.status_code != 201:
             raise Exception(req.text.strip())
 
-    def add_width_height(self, mediafile, read_location):
+    def add_width_height(self, mediafile, read_location, headers=None):
         if "image/" in mediafile["mimetype"]:
             with Image.open(read_location) as img:
                 data = {"img_width": img.width, "img_height": img.height}
@@ -93,9 +117,9 @@ class Transcoder(metaclass=Singleton):
             }
         if not data["img_width"] or not data["img_height"]:
             raise Exception("Could not get width and/or height")
-        self.__patch_mediafile(mediafile, data)
+        self.__patch_mediafile(mediafile, data, headers)
 
-    def transcode(self, mediafile, url, operation_name):
+    def transcode(self, mediafile, url, operation_name, headers=None):
         with tempfile.TemporaryDirectory() as temp_dir:
             read_location = os.path.join(temp_dir, mediafile["filename"])
             write_location = os.path.join(
@@ -117,19 +141,26 @@ class Transcoder(metaclass=Singleton):
                 },
                 "width_height": {
                     "func": self.add_width_height,
-                    "args": [mediafile, read_location],
+                    "args": [mediafile, read_location, headers],
                     "upload": False,
                 },
             }.get(operation_name)
             if not operation:
                 raise Exception(f"Operation {operation_name} not supported")
             with open(read_location, "wb") as input_file:
-                self.__get_file(url, input_file)
+                self.__get_file(
+                    self.__get_mediafile_download_link(mediafile, headers),
+                    input_file,
+                    headers,
+                )
             operation["func"](*operation["args"])
             if operation.get("upload", True):
                 with open(write_location, "rb") as output_file:
                     self.__upload_transcode(
-                        mediafile, os.path.basename(write_location), output_file
+                        mediafile,
+                        os.path.basename(write_location),
+                        output_file,
+                        headers,
                     )
 
     def transcode_to_jpeg(self, mediafile, read_location, write_location):
