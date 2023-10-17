@@ -1,4 +1,5 @@
 import app
+import os
 
 from flask import request
 from flask_restful import abort, Resource
@@ -6,6 +7,13 @@ from transcoder import Transcoder
 
 
 class BaseTranscode(Resource):
+    def __get_auth_headers(self):
+        tenant = request.headers.get("apikey")
+        if tenant:
+            return {"apikey": tenant}
+        else:
+            return {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
+
     def __get_request_body(self):
         if request_body := request.get_json(silent=True):
             return request_body
@@ -25,7 +33,12 @@ class BaseTranscode(Resource):
         if operation == "mp3" and content["mimetype"] == "audio/mpeg":
             abort(400, message=f'{content["mediafile"]["filename"]} is already an mp3')
         try:
-            Transcoder().transcode(content["mediafile"], content["url"], operation)
+            Transcoder().transcode(
+                content["mediafile"],
+                content["url"],
+                operation,
+                self.__get_auth_headers(),
+            )
         except Exception as ex:
             return str(ex), 400
         return message.format(content["mediafile"]["filename"]), 201
