@@ -119,7 +119,7 @@ class Transcoder(metaclass=Singleton):
             raise Exception("Could not get width and/or height")
         self.__patch_mediafile(mediafile, data, headers)
 
-    def transcode(self, mediafile, url, operation_name, headers=None):
+    def transcode(self, mediafile, operation_name, headers=None):
         with tempfile.TemporaryDirectory() as temp_dir:
             read_location = os.path.join(temp_dir, mediafile["filename"])
             write_location = os.path.join(

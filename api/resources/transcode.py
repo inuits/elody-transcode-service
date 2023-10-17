@@ -27,15 +27,12 @@ class BaseTranscode(Resource):
 
     def post(self, operation, mimetypes, message):
         content = self.__get_request_body()
-        self.__is_malformed_message(
-            content, ["mediafile", "mimetype", "url"], mimetypes
-        )
+        self.__is_malformed_message(content, ["mediafile", "mimetype"], mimetypes)
         if operation == "mp3" and content["mimetype"] == "audio/mpeg":
             abort(400, message=f'{content["mediafile"]["filename"]} is already an mp3')
         try:
             Transcoder().transcode(
                 content["mediafile"],
-                content["url"],
                 operation,
                 self.__get_auth_headers(),
             )

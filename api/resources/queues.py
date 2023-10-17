@@ -14,15 +14,13 @@ def __is_malformed_message(data, fields, mimetypes):
 
 def __do_transcode(body, operation, mimetypes, error_message):
     data = body["data"]
-    if __is_malformed_message(data, ["mediafile", "mimetype", "url"], mimetypes):
+    if __is_malformed_message(data, ["mediafile", "mimetype"], mimetypes):
         return
     try:
         if "headers" in data:
-            Transcoder().transcode(
-                data["mediafile"], data["url"], operation, data.get("headers")
-            )
+            Transcoder().transcode(data["mediafile"], operation, data.get("headers"))
         else:
-            Transcoder().transcode(data["mediafile"], data["url"], operation)
+            Transcoder().transcode(data["mediafile"], operation)
     except Exception as ex:
         app.logger.error(f'{error_message.format(data["mediafile"]["filename"])} {ex}')
 
