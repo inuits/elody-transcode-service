@@ -76,6 +76,7 @@ from resources.transcode import (
     JpegTranscode,
     MP3Transcode,
     MP4Transcode,
+    PDFTranscode,
     WidthHeightTranscode,
 )
 import resources.queues
@@ -86,6 +87,7 @@ api.add_resource(OpenAPISpec, "/spec/dams-transcode-service.json")
 api.add_resource(JpegTranscode, "/transcode/jpeg")
 api.add_resource(MP3Transcode, "/transcode/mp3")
 api.add_resource(MP4Transcode, "/transcode/mp4")
+api.add_resource(PDFTranscode, "/transcode/pdf")
 api.add_resource(WidthHeightTranscode, "/transcode/widthheight")
 
 if __name__ == "__main__":

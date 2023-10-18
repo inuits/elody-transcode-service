@@ -105,6 +105,23 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 201:
             raise Exception(req.text.strip())
 
+    def __upload_mediafile(self, file_name, file_bytes, headers=None):
+        req = requests.post(
+            f"{self.collection_api_url}/mediafiles",
+            json={"filename": file_name},
+            headers={"Accept": "text/uri-list", **self.__get_headers(headers)},
+        )
+        if req.status_code != 201:
+            raise Exception(req.text.strip())
+        upload_link = req.text.strip()
+        req = requests.post(
+            upload_link,
+            files={"file": (file_name, file_bytes)},
+            headers=self.__get_headers(headers),
+        )
+        if req.status_code != 201:
+            raise Exception(req.text.strip())
+
     def add_width_height(self, mediafile, read_location, headers=None):
         if "image/" in mediafile["mimetype"]:
             with Image.open(read_location) as img:
@@ -163,6 +180,37 @@ class Transcoder(metaclass=Singleton):
                         headers,
                     )
 
+    def transcode_multiple_mediafiles(self, mediafiles, operation_name, headers=None):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            write_location = os.path.join(
+                temp_dir,
+                f"generated_pdf.{operation_name}",
+            )
+            operation = {
+                "pdf": {
+                    "func": self.transcode_to_pdf,
+                    "args": [mediafiles, temp_dir, write_location],
+                },
+            }.get(operation_name)
+            if not operation:
+                raise Exception(f"Operation {operation_name} not supported")
+            for mediafile in mediafiles:
+                read_location = os.path.join(temp_dir, mediafile["filename"])
+                with open(read_location, "wb") as input_file:
+                    self.__get_file(
+                        self.__get_mediafile_download_link(mediafile, headers),
+                        input_file,
+                        headers,
+                    )
+            operation["func"](*operation["args"])
+            if operation.get("upload", True):
+                with open(write_location, "rb") as output_file:
+                    self.__upload_mediafile(
+                        os.path.basename(write_location),
+                        output_file,
+                        headers,
+                    )
+
     def transcode_to_jpeg(self, mediafile, read_location, write_location):
         with Image.open(read_location) as src_img:
             exif = src_img.getexif()
@@ -205,3 +253,16 @@ class Transcoder(metaclass=Singleton):
             }
         for _ in c.convert(read_location, write_location, opts, timeout=0):
             pass
+
+    def transcode_to_pdf(self, mediafiles, read_location, write_location):
+        images = [
+            Image.open(f"{os.path.join(read_location, f.get('filename'))}")
+            for f in mediafiles
+        ]
+        images[0].save(
+            write_location,
+            "PDF",
+            resolution=100.0,
+            save_all=True,
+            append_images=images[1:],
+        )

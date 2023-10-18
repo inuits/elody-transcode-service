@@ -65,3 +65,21 @@ class WidthHeightTranscode(BaseTranscode):
         return super().post(
             "width_height", ["image/", "video/"], "Successfully added {} width & height"
         )
+
+
+class PDFTranscode(BaseTranscode):
+    @app.require_oauth("transcode-to-pdf")
+    def post(self):
+        content = self._get_request_body()
+        try:
+            Transcoder().transcode_multiple_mediafiles(
+                content["mediafiles"],
+                "pdf",
+                self._get_auth_headers(),
+            )
+        except Exception as ex:
+            return str(ex), 400
+        return (
+            f"Successfully generated PDF from {len(content['mediafiles'])} images",
+            201,
+        )
