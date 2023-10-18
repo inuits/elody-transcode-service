@@ -7,7 +7,7 @@ import tempfile
 
 from converter import Converter
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
 Image.MAX_IMAGE_PIXELS = None
@@ -106,7 +106,9 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 201:
             raise Exception(req.text.strip())
 
-    def __upload_mediafile(self, file_name, file_bytes, headers=None):
+    def __upload_mediafile(
+        self, file_name, file_bytes, headers=None, master_entity_id=None
+    ):
         req = requests.post(
             f"{self.collection_api_url}/mediafiles",
             json={"filename": file_name},
@@ -115,6 +117,19 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 201:
             raise Exception(req.text.strip())
         upload_link = req.text.strip()
+        if master_entity_id:
+            mediafile_id = parse_qs(urlparse(upload_link).query).get("id", list())[0]
+            req = requests.post(
+                f"{self.collection_api_url}/entities/{master_entity_id}/relations",
+                json=[{"key": mediafile_id, "type": "hasMediafile"}],
+                headers=self.__get_headers(headers),
+            )
+            if req.status_code != 201:
+                requests.delete(
+                    f"{self.collection_api_url}/mediafiles/{mediafile_id}",
+                    headers=self.__get_headers(headers),
+                )
+                raise Exception(req.text.strip())
         req = requests.post(
             upload_link,
             files={"file": (file_name, file_bytes)},
@@ -181,7 +196,9 @@ class Transcoder(metaclass=Singleton):
                         headers,
                     )
 
-    def transcode_multiple_mediafiles(self, mediafiles, operation_name, headers=None):
+    def transcode_multiple_mediafiles(
+        self, mediafiles, operation_name, headers=None, master_entity_id=None
+    ):
         with tempfile.TemporaryDirectory() as temp_dir:
             write_location = os.path.join(
                 temp_dir,
@@ -210,6 +227,7 @@ class Transcoder(metaclass=Singleton):
                         os.path.basename(write_location),
                         output_file,
                         headers,
+                        master_entity_id,
                     )
 
     def transcode_to_jpeg(self, mediafile, read_location, write_location):

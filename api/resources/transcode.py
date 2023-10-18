@@ -71,11 +71,13 @@ class PDFTranscode(BaseTranscode):
     @app.require_oauth("transcode-to-pdf")
     def post(self):
         content = self._get_request_body()
+        master_entity_id = request.args.get("master_entity_id", "", str)
         try:
             Transcoder().transcode_multiple_mediafiles(
                 content["mediafiles"],
                 "pdf",
                 self._get_auth_headers(),
+                master_entity_id,
             )
         except Exception as ex:
             return str(ex), 400
