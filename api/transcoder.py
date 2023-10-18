@@ -8,6 +8,7 @@ import tempfile
 from converter import Converter
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
 from urllib.parse import urlparse
+from uuid import uuid4
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -184,7 +185,7 @@ class Transcoder(metaclass=Singleton):
         with tempfile.TemporaryDirectory() as temp_dir:
             write_location = os.path.join(
                 temp_dir,
-                f"generated_pdf.{operation_name}",
+                f"{uuid4()}.{operation_name}",
             )
             operation = {
                 "pdf": {
