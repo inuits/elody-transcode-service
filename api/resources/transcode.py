@@ -14,11 +14,9 @@ class BaseTranscode(Resource):
             abort(405, message="Mimetype not allowed")
 
     def _get_auth_headers(self):
-        tenant = request.headers.get("apikey")
-        if tenant:
+        if tenant := request.headers.get("apikey"):
             return {"apikey": tenant}
-        else:
-            return {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
+        return {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
 
     def _get_request_body(self):
         if request_body := request.get_json(silent=True):

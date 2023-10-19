@@ -89,23 +89,6 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 201:
             raise Exception(req.text.strip())
 
-    def __upload_transcode(self, mediafile, file_name, file_bytes, headers=None):
-        req = requests.post(
-            f"{self.collection_api_url}/tickets",
-            json={"filename": file_name},
-            headers=self.__get_headers(headers),
-        )
-        if req.status_code != 201:
-            raise Exception(req.text.strip())
-        ticket_id = req.text.strip().replace('"', "")
-        req = requests.post(
-            f"{self.storage_api_url}/upload/transcode?id={self.__get_raw_id(mediafile)}&ticket_id={ticket_id}",
-            files={"file": (file_name, file_bytes)},
-            headers=self.__get_headers(headers),
-        )
-        if req.status_code != 201:
-            raise Exception(req.text.strip())
-
     def __upload_mediafile(
         self, file_name, file_bytes, headers=None, master_entity_id=None
     ):
@@ -132,6 +115,23 @@ class Transcoder(metaclass=Singleton):
                 raise Exception(req.text.strip())
         req = requests.post(
             upload_link,
+            files={"file": (file_name, file_bytes)},
+            headers=self.__get_headers(headers),
+        )
+        if req.status_code != 201:
+            raise Exception(req.text.strip())
+
+    def __upload_transcode(self, mediafile, file_name, file_bytes, headers=None):
+        req = requests.post(
+            f"{self.collection_api_url}/tickets",
+            json={"filename": file_name},
+            headers=self.__get_headers(headers),
+        )
+        if req.status_code != 201:
+            raise Exception(req.text.strip())
+        ticket_id = req.text.strip().replace('"', "")
+        req = requests.post(
+            f"{self.storage_api_url}/upload/transcode?id={self.__get_raw_id(mediafile)}&ticket_id={ticket_id}",
             files={"file": (file_name, file_bytes)},
             headers=self.__get_headers(headers),
         )
