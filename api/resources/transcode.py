@@ -1,8 +1,10 @@
 import app
 import os
 
+from app import policy_factory
 from flask import request
 from flask_restful import abort, Resource
+from inuits_policy_based_auth import RequestContext
 from transcoder import Transcoder
 
 
@@ -40,25 +42,25 @@ class BaseTranscode(Resource):
 
 
 class JpegTranscode(BaseTranscode):
-    @app.require_oauth("transcode-to-jpeg")
+    @policy_factory.authenticate(RequestContext(request))
     def post(self):
         return super().post("jpg", ["image/"], "Successfully transcoded {} to jpeg")
 
 
 class MP3Transcode(BaseTranscode):
-    @app.require_oauth("transcode-to-mp3")
+    @policy_factory.authenticate(RequestContext(request))
     def post(self):
         return super().post("mp3", ["audio/"], "Successfully transcoded {} to mp3")
 
 
 class MP4Transcode(BaseTranscode):
-    @app.require_oauth("transcode-to-mp4")
+    @policy_factory.authenticate(RequestContext(request))
     def post(self):
         return super().post("mp4", ["video/"], "Successfully transcoded {} to mp4")
 
 
 class WidthHeightTranscode(BaseTranscode):
-    @app.require_oauth("transcode-add-width-height")
+    @policy_factory.authenticate(RequestContext(request))
     def post(self):
         return super().post(
             "width_height", ["image/", "video/"], "Successfully added {} width & height"
@@ -66,7 +68,7 @@ class WidthHeightTranscode(BaseTranscode):
 
 
 class PDFTranscode(BaseTranscode):
-    @app.require_oauth("transcode-to-pdf")
+    @policy_factory.authenticate(RequestContext(request))
     def post(self):
         content = self._get_request_body()
         master_entity_id = request.args.get("master_entity_id", "", str)
