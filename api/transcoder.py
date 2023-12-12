@@ -53,7 +53,7 @@ class Transcoder(metaclass=Singleton):
     def __get_file(self, url, output, headers=None):
         with requests.get(url, headers=self.__get_headers(headers), stream=True) as req:
             if req.status_code != 200:
-                raise Exception(req.text.strip())
+                raise Exception(f"Could not get mediafiles from {url}\n" + req.text.strip())
             shutil.copyfileobj(req.raw, output)
 
     def __get_headers(self, headers=None):
@@ -68,12 +68,13 @@ class Transcoder(metaclass=Singleton):
         return None
 
     def __get_mediafile_download_link(self, mediafile, headers=None):
+        mediafiles_url = f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}"
         req = requests.get(
-            f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
+            mediafiles_url,
             headers=self.__get_headers(headers),
         )
         if req.status_code != 200:
-            raise Exception(req.text.strip())
+            raise Exception(f"Could not get mediafiles from {mediafiles_url}\n" + req.text.strip())
         parsed_uri = urlparse(req.json().get("original_file_location"))
         return f"{self.storage_api_url}{parsed_uri.path}?{parsed_uri.query}"
 
