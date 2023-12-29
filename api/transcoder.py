@@ -154,7 +154,7 @@ class Transcoder(metaclass=Singleton):
 
     def __get_mediafile_download_link(self, mediafile, headers=None):
         mediafile = self.__get_mediafile(self.__get_raw_id(mediafile))
-        parsed_uri = urlparse(mediafile.get("original_file_location"))
+        parsed_uri = urlparse(mediafile.get("original_object_location"))
         return f"{self.storage_api_url.replace('/storage/v1', '')}{parsed_uri.path}?{parsed_uri.query}"
 
     def __get_raw_id(self, item):
@@ -234,14 +234,17 @@ class Transcoder(metaclass=Singleton):
     def __upload_transcode(self, mediafile, file_name, file_bytes, headers=None):
         req = requests.post(
             f"{self.collection_api_url}/tickets",
-            json={"filename": file_name},
+            json={
+                "identifier": file_name,
+                "mediafile_id": self.__get_raw_id(mediafile),
+            },
             headers=self.__get_headers(headers),
         )
         if req.status_code != 201:
             raise Exception(req.text.strip())
         ticket_id = req.text.strip().replace('"', "")
         req = requests.post(
-            f"{self.storage_api_url}/upload/transcode?id={self.__get_raw_id(mediafile)}&ticket_id={ticket_id}",
+            f"{self.storage_api_url}/upload/{ticket_id}",
             files={"file": (file_name, file_bytes)},
             headers=self.__get_headers(headers),
         )
@@ -316,10 +319,10 @@ class Transcoder(metaclass=Singleton):
 
     def transcode(self, mediafile, operation_name, headers=None):
         with tempfile.TemporaryDirectory() as temp_dir:
-            read_location = os.path.join(temp_dir, mediafile["filename"])
+            read_location = os.path.join(temp_dir, mediafile["identifier"])
             write_location = os.path.join(
                 temp_dir,
-                f'{os.path.splitext(mediafile["original_filename"])[0]}.{operation_name}',
+                f'{os.path.splitext(mediafile["original_identifier"])[0]}.{operation_name}',
             )
             operation = {
                 "jpg": {

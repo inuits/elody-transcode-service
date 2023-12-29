@@ -22,7 +22,9 @@ def __do_transcode(body, operation, mimetypes, error_message):
         else:
             Transcoder().transcode(data["mediafile"], operation)
     except Exception as ex:
-        app.logger.error(f'{error_message.format(data["mediafile"]["filename"])} {ex}')
+        app.logger.error(
+            f'{error_message.format(data["mediafile"]["identifier"])} {ex}'
+        )
 
 
 @app.rabbit.queue("dams.create_zip")

@@ -1,4 +1,3 @@
-import app
 import os
 
 from app import policy_factory
@@ -31,7 +30,9 @@ class BaseTranscode(Resource):
         content = self._get_request_body()
         self.__is_malformed_message(content, ["mediafile", "mimetype"], mimetypes)
         if operation == "mp3" and content["mimetype"] == "audio/mpeg":
-            abort(400, message=f'{content["mediafile"]["filename"]} is already an mp3')
+            abort(
+                400, message=f'{content["mediafile"]["identifier"]} is already an mp3'
+            )
         try:
             Transcoder().transcode(
                 content["mediafile"],
@@ -40,7 +41,7 @@ class BaseTranscode(Resource):
             )
         except Exception as ex:
             return str(ex), 400
-        return message.format(content["mediafile"]["filename"]), 201
+        return message.format(content["mediafile"]["identifier"]), 201
 
 
 class JpegTranscode(BaseTranscode):
