@@ -8,7 +8,6 @@ from flask import Flask
 from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
-from inuits_jwt_auth.authorization import JWTValidator, MyResourceProtector
 from inuits_policy_based_auth import PolicyFactory
 from rabbitmq_pika_flask import RabbitMQ
 
