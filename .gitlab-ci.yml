@@ -1,18 +1,18 @@
 ---
-###############################################################################
-# PYTHON APPLICATION PIPELINE
-###############################################################################
-
 include:
   - project: 'inuits/gitlab-ci/pipeline-templates'
-    file: 'pip-pipeline.yml'
-    ref: 'v1.7.1'
-  - project: 'rnd/inuits/dams/pipeline-deploy-targets'
-    file: 'deployment-targets.yml'
-    ref: 'master'
+    ref: 'v2.2.0'
+    file: 
+      - '/pipelines/multi-customer-delivery.yml'
+      - '/jobs/build-variant/pip.yml'
 
 variables:
-  APPLICATION: 'dams-base-transcoder'
-  CUSTOMER: 'inuits'
+  PROJECT: 'dams'
+  APPLICATION: 'base-transcoder'
 
-  TARGETS: 'coghent,digipolis-dams'
+customer:
+  parallel:
+    matrix:
+      - CUSTOMER:
+        - digipolis
+        - coghent
