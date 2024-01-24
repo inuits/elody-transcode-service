@@ -5,7 +5,6 @@ include:
     file: 
       - '/pipelines/multi-customer-delivery.yml'
       - '/jobs/build-variant/pip.yml'
-      - '/pipelines/inuits/deploy-inuits.yml'
 
 variables:
   PROJECT: 'dams'
