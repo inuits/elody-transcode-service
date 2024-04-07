@@ -8,7 +8,7 @@ click==8.1.7
 cryptography==42.0.5
 decorator==5.1.1
 elody[loader]==0.0.61
-Flask==3.0.1
+Flask==3.0.3
 Flask-RESTful==0.3.10
 flask-swagger-ui==4.11.1
 gunicorn==21.2.0
