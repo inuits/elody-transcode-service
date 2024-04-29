@@ -85,3 +85,8 @@ class PDFTranscode(BaseTranscode):
             f"Successfully generated PDF from {len(content['mediafiles'])} images",
             201,
         )
+
+class ZipTranscode(BaseTranscode):
+    @policy_factory.authenticate(RequestContext(request))
+    def post(self):
+        return "Generating ZIP file for requested entities and mediafiles"

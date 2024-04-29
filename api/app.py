@@ -71,6 +71,7 @@ from resources.transcode import (
     MP4Transcode,
     PDFTranscode,
     WidthHeightTranscode,
+    ZipTranscode,
 )
 import resources.queues
 
@@ -82,6 +83,7 @@ api.add_resource(MP3Transcode, "/transcode/mp3")
 api.add_resource(MP4Transcode, "/transcode/mp4")
 api.add_resource(PDFTranscode, "/transcode/pdf")
 api.add_resource(WidthHeightTranscode, "/transcode/widthheight")
+api.add_resource(ZipTranscode, "/transcode/zip")
 
 if __name__ == "__main__":
     app.run()
