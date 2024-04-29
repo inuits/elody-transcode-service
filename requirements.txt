@@ -11,7 +11,7 @@ elody[loader]==0.0.61
 Flask==3.0.3
 Flask-RESTful==0.3.10
 flask-swagger-ui==4.11.1
-gunicorn==21.2.0
+gunicorn==22.0.0
 idna==3.7
 inuits-policy-based-auth==9.6.0
 itsdangerous==2.2.0
