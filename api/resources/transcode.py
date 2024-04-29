@@ -86,7 +86,19 @@ class PDFTranscode(BaseTranscode):
             201,
         )
 
+
 class ZipTranscode(BaseTranscode):
     @policy_factory.authenticate(RequestContext(request))
     def post(self):
-        return "Generating ZIP file for requested entities and mediafiles"
+        content = self._get_request_body()
+        try:
+            zip_location = Transcoder().create_zip(
+                content,
+                self._get_auth_headers(),
+            )
+        except Exception as ex:
+            return str(ex), 400
+        return (
+            f"ZIP file can be found here: {zip_location}",
+            201,
+        )

@@ -9,6 +9,7 @@ from converter import Converter
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
+from zipfile import ZipFile
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -33,6 +34,49 @@ class Transcoder(metaclass=Singleton):
             exif[ExifTags.Base.Artist] = artist
         if copyrights:
             exif[ExifTags.Base.Copyright] = copyrights
+
+    def __add_entities_to_zip(self, zipfile, working_dir, entity_ids, headers=None):
+        for entity_id in entity_ids:
+            entity_mediafiles = self.__get_entity_mediafiles(entity_id, headers)
+            for mediafile in entity_mediafiles.get("results", list()):
+                self.__add_single_file_to_zip(
+                    zipfile, working_dir, mediafile, headers, entity_id
+                )
+
+    def __add_mediafiles_to_zip(
+        self, zipfile, working_dir, mediafile_ids, headers=None
+    ):
+        for mediafile_id in mediafile_ids:
+            mediafile = self.__get_mediafile(mediafile_id, headers)
+            self.__add_single_file_to_zip(zipfile, working_dir, mediafile, headers)
+
+    def __add_single_file_to_zip(
+        self, zipfile, working_dir, mediafile, headers=None, destination_path=""
+    ):
+        filename = mediafile["filename"]
+        read_location = os.path.join(working_dir, filename)
+        with open(read_location, "wb") as input_file:
+            self.__get_file(
+                self.__get_mediafile_download_link(mediafile, headers),
+                input_file,
+                headers,
+            )
+        zipfile.write(read_location, os.path.join(destination_path, filename))
+
+    def __get_entity_mediafiles(self, entity_id, headers=None):
+        entity_mediafiles_url = (
+            f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
+        )
+        req = requests.get(
+            entity_mediafiles_url,
+            headers=self.__get_headers(headers),
+        )
+        if req.status_code != 200:
+            raise Exception(
+                f"Could not get entity mediafiles from {entity_mediafiles_url}\n"
+                + req.text.strip()
+            )
+        return req.json()
 
     def __get_exif_for_mediafile(self, mediafile):
         artist, copyrights = list(), list()
@@ -159,6 +203,20 @@ class Transcoder(metaclass=Singleton):
         if not data["img_width"] or not data["img_height"]:
             raise Exception("Could not get width and/or height")
         self.__patch_mediafile(mediafile, data, headers)
+
+    def create_zip(self, request_body, headers=None):
+        zip_location = None
+        with tempfile.TemporaryDirectory() as temp_dir:
+            zip_location = "/app/test.zip"
+            with ZipFile(zip_location, "w") as zip:
+                self.__add_entities_to_zip(
+                    zip, temp_dir, request_body.get("entities", list()), headers
+                )
+                self.__add_mediafiles_to_zip(
+                    zip, temp_dir, request_body.get("mediafiles", list()), headers
+                )
+        zip.close()
+        return zip_location
 
     def transcode(self, mediafile, operation_name, headers=None):
         with tempfile.TemporaryDirectory() as temp_dir:
