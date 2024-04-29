@@ -67,19 +67,22 @@ class Transcoder(metaclass=Singleton):
                 return entry["value"]
         return None
 
-    def __get_mediafile_download_link(self, mediafile, headers=None):
-        mediafiles_url = (
-            f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}"
-        )
+    def __get_mediafile(self, mediafile_id, headers=None):
+        mediafiles_url = f"{self.collection_api_url}/mediafiles/{mediafile_id}"
         req = requests.get(
             mediafiles_url,
             headers=self.__get_headers(headers),
         )
         if req.status_code != 200:
             raise Exception(
-                f"Could not get mediafiles from {mediafiles_url}\n" + req.text.strip()
+                f"Could not get mediafile details from {mediafiles_url}\n"
+                + req.text.strip()
             )
-        parsed_uri = urlparse(req.json().get("original_file_location"))
+        return req.json()
+
+    def __get_mediafile_download_link(self, mediafile, headers=None):
+        mediafile = self.__get_mediafile(self.__get_raw_id(mediafile))
+        parsed_uri = urlparse(mediafile.get("original_file_location"))
         return f"{self.storage_api_url.replace('/storage/v1', '')}{parsed_uri.path}?{parsed_uri.query}"
 
     def __get_raw_id(self, item):
