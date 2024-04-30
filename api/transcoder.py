@@ -6,6 +6,7 @@ import shutil
 import tempfile
 
 from converter import Converter
+from datetime import datetime
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
@@ -28,6 +29,7 @@ class Transcoder(metaclass=Singleton):
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
         self.headers = {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
         self.storage_api_url = os.getenv("STORAGE_API_URL")
+        self.zip_working_dir = os.getenv("ZIP_WORKING_DIR", "/app")
 
     def __add_artist_and_copyright_to_exif(self, exif, artist, copyrights):
         if artist:
@@ -256,7 +258,10 @@ class Transcoder(metaclass=Singleton):
     def create_zip(self, request_body, headers=None):
         zip_location = None
         with tempfile.TemporaryDirectory() as temp_dir:
-            zip_location = "/app/test.zip"
+            datetime_string = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            zip_location = os.path.join(
+                self.zip_working_dir, f"downloadset-{datetime_string}.zip"
+            )
             with ZipFile(zip_location, "w") as zip:
                 self.__add_entities_to_zip(
                     zip, temp_dir, request_body.get("entities", list()), headers
