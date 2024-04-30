@@ -179,6 +179,26 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 201:
             raise Exception(req.text.strip())
 
+    def __set_download_entity_progress(
+        self, download_entity_id, progress, headers=None
+    ):
+        payload = [
+            {
+                "key": "status",
+                "value": progress,
+                "lang": "en",
+            }
+        ]
+        req = requests.patch(
+            f"{self.collection_api_url}/entities/{download_entity_id}/metadata",
+            json=payload,
+            headers=self.__get_headers(headers),
+        )
+        if req.status_code != 201:
+            app.logger.info(
+                f"Failed report progress on download entity, status code: {req.status_code}"
+            )
+
     def __upload_mediafile(
         self, file_name, file_bytes, headers=None, master_entity_id=None
     ):
@@ -256,6 +276,10 @@ class Transcoder(metaclass=Singleton):
         self.__patch_mediafile(mediafile, data, headers)
 
     def create_zip(self, request_body, headers=None):
+        if download_entity_id := request_body.get("download_entity"):
+            self.__set_download_entity_progress(
+                download_entity_id, "In Progress", headers
+            )
         zip_location = None
         with tempfile.TemporaryDirectory() as temp_dir:
             datetime_string = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -281,10 +305,11 @@ class Transcoder(metaclass=Singleton):
                         request_body.get(csv_fields_definition_field, list()),
                         headers,
                     )
-        if download_entity_id := request_body.get("download_entity"):
+        if download_entity_id:
             self.__upload_zip_to_download_entity(
                 download_entity_id, zip_location, headers
             )
+            self.__set_download_entity_progress(download_entity_id, "Finished", headers)
         return zip_location
 
     def transcode(self, mediafile, operation_name, headers=None):
