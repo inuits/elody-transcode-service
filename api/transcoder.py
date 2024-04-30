@@ -51,10 +51,10 @@ class Transcoder(metaclass=Singleton):
             self.__add_single_file_to_zip(zipfile, working_dir, mediafile, headers)
 
     def __add_objects_csv_to_zip(
-        self, zipfile, working_dir, object_ids, object_type, headers=None
+        self, zipfile, working_dir, object_ids, object_type, fields=None, headers=None
     ):
         if csv_for_objects := self.__get_csv_for_objects(
-            object_ids, object_type, headers
+            object_ids, object_type, fields, headers
         ):
             objects_csv_path = os.path.join(working_dir, f"{object_type}.csv")
             with open(objects_csv_path, "w") as objects_csv:
@@ -74,10 +74,12 @@ class Transcoder(metaclass=Singleton):
             )
         zipfile.write(read_location, os.path.join(destination_path, filename))
 
-    def __get_csv_for_objects(self, object_ids, object_type="entities", headers=None):
+    def __get_csv_for_objects(
+        self, object_ids, object_type="entities", fields=None, headers=None
+    ):
         req = requests.get(
             f"{self.collection_api_url}/{object_type}",
-            params={"ids": ",".join(object_ids)},
+            params={"ids": ",".join(object_ids), "field[]": fields},
             headers=self.__get_headers({**{"Accept": "text/csv"}, **headers}),
         )
         if req.status_code != 200:
@@ -239,12 +241,16 @@ class Transcoder(metaclass=Singleton):
                 self.__add_mediafiles_to_zip(
                     zip, temp_dir, request_body.get("mediafiles", list()), headers
                 )
-                for object_type in ["entities", "mediafiles"]:
+                for object_type, csv_fields_definition_field in {
+                    "entities": "csv_entity_columns",
+                    "mediafiles": "csv_mediafile_columns",
+                }.items():
                     self.__add_objects_csv_to_zip(
                         zip,
                         temp_dir,
                         request_body.get(object_type, list()),
                         object_type,
+                        request_body.get(csv_fields_definition_field, list()),
                         headers,
                     )
         return zip_location
