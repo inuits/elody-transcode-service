@@ -50,6 +50,17 @@ class Transcoder(metaclass=Singleton):
             mediafile = self.__get_mediafile(mediafile_id, headers)
             self.__add_single_file_to_zip(zipfile, working_dir, mediafile, headers)
 
+    def __add_objects_csv_to_zip(
+        self, zipfile, working_dir, object_ids, object_type, headers=None
+    ):
+        if csv_for_objects := self.__get_csv_for_objects(
+            object_ids, object_type, headers
+        ):
+            objects_csv_path = os.path.join(working_dir, f"{object_type}.csv")
+            with open(objects_csv_path, "w") as objects_csv:
+                objects_csv.write(csv_for_objects)
+            zipfile.write(objects_csv_path, f"{object_type}.csv")
+
     def __add_single_file_to_zip(
         self, zipfile, working_dir, mediafile, headers=None, destination_path=""
     ):
@@ -62,6 +73,19 @@ class Transcoder(metaclass=Singleton):
                 headers,
             )
         zipfile.write(read_location, os.path.join(destination_path, filename))
+
+    def __get_csv_for_objects(self, object_ids, object_type="entities", headers=None):
+        req = requests.get(
+            f"{self.collection_api_url}/{object_type}",
+            params={"ids": ",".join(object_ids)},
+            headers=self.__get_headers({**{"Accept": "text/csv"}, **headers}),
+        )
+        if req.status_code != 200:
+            app.logger.info(
+                f"Could not fetch CSV for {object_type}, status code: {req.status_code}"
+            )
+            return
+        return req.text
 
     def __get_entity_mediafiles(self, entity_id, headers=None):
         entity_mediafiles_url = (
@@ -215,6 +239,14 @@ class Transcoder(metaclass=Singleton):
                 self.__add_mediafiles_to_zip(
                     zip, temp_dir, request_body.get("mediafiles", list()), headers
                 )
+                for object_type in ["entities", "mediafiles"]:
+                    self.__add_objects_csv_to_zip(
+                        zip,
+                        temp_dir,
+                        request_body.get(object_type, list()),
+                        object_type,
+                        headers,
+                    )
         return zip_location
 
     def transcode(self, mediafile, operation_name, headers=None):
