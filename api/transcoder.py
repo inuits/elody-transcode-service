@@ -215,7 +215,6 @@ class Transcoder(metaclass=Singleton):
                 self.__add_mediafiles_to_zip(
                     zip, temp_dir, request_body.get("mediafiles", list()), headers
                 )
-        zip.close()
         return zip_location
 
     def transcode(self, mediafile, operation_name, headers=None):
