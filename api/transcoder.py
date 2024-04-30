@@ -158,6 +158,16 @@ class Transcoder(metaclass=Singleton):
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
 
+    def __get_zip_upload_link(self, entity_id, zip_filename, headers=None):
+        mediafile = {
+            "filename": zip_filename,
+            "metadata": list(),
+        }
+        url = f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
+        headers = {**{"Accept": "text/uri-list"}, **headers}
+        req = requests.post(url, json=mediafile, headers=headers)
+        return req.text.strip()
+
     def __patch_mediafile(self, mediafile, payload, headers):
         req = requests.patch(
             f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
@@ -216,6 +226,19 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 201:
             raise Exception(req.text.strip())
 
+    def __upload_zip_to_download_entity(
+        self, download_entity_id, zip_location, headers=None
+    ):
+        with open(zip_location, "rb") as zip:
+            zip_upload_link = self.__get_zip_upload_link(
+                download_entity_id, os.path.basename(zip_location), headers
+            )
+            req = requests.post(zip_upload_link, files={"file": zip})
+            if req.status_code != 201:
+                app.logger.info(
+                    f"Failed to upload zip to download entity, status code: {req.status_code}"
+                )
+
     def add_width_height(self, mediafile, read_location, headers=None):
         if "image/" in mediafile["mimetype"]:
             with Image.open(read_location) as img:
@@ -253,6 +276,10 @@ class Transcoder(metaclass=Singleton):
                         request_body.get(csv_fields_definition_field, list()),
                         headers,
                     )
+        if download_entity_id := request_body.get("download_entity"):
+            self.__upload_zip_to_download_entity(
+                download_entity_id, zip_location, headers
+            )
         return zip_location
 
     def transcode(self, mediafile, operation_name, headers=None):
