@@ -2,6 +2,8 @@ import app
 import os
 
 from app import policy_factory
+from cloudevents.conversion import to_dict
+from cloudevents.http import CloudEvent
 from flask import request
 from flask_restful import abort, Resource
 from inuits_policy_based_auth import RequestContext
@@ -90,15 +92,12 @@ class PDFTranscode(BaseTranscode):
 class ZipTranscode(BaseTranscode):
     @policy_factory.authenticate(RequestContext(request))
     def post(self):
-        content = self._get_request_body()
-        try:
-            zip_location = Transcoder().create_zip(
-                content,
-                self._get_auth_headers(),
-            )
-        except Exception as ex:
-            return str(ex), 400
+        attributes = {"type": "dams.create_zip", "source": "dams"}
+        data = self._get_request_body()
+        data["auth_headers"] = self._get_auth_headers()
+        event = to_dict(CloudEvent(attributes, data))
+        app.rabbit.send(event, routing_key="dams.create_zip")
         return (
-            f"ZIP file can be found here: {zip_location}",
+            "ZIP creation job place on the queue",
             201,
         )

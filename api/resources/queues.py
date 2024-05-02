@@ -25,6 +25,18 @@ def __do_transcode(body, operation, mimetypes, error_message):
         app.logger.error(f'{error_message.format(data["mediafile"]["filename"])} {ex}')
 
 
+@app.rabbit.queue("dams.create_zip")
+def create_zip(routing_key, body, message_id):
+    data = body["data"]
+    try:
+        zip_location = Transcoder().create_zip(
+            data,
+            data["auth_headers"],
+        )
+    except Exception as ex:
+        app.logger.error(f"Could not create ZIP-file {ex}")
+
+
 @app.rabbit.queue("dams.file_uploaded")
 def transcode_add_width_height(routing_key, body, message_id):
     __do_transcode(
