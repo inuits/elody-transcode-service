@@ -260,6 +260,8 @@ class Transcoder(metaclass=Singleton):
                 app.logger.info(
                     f"Failed to upload zip to download entity, status code: {req.status_code}"
                 )
+                return
+            os.remove(zip_location)
 
     def add_width_height(self, mediafile, read_location, headers=None):
         if "image/" in mediafile["mimetype"]:
