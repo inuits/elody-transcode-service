@@ -66,15 +66,15 @@ class Transcoder(metaclass=Singleton):
     def __add_single_file_to_zip(
         self, zipfile, working_dir, mediafile, headers=None, destination_path=""
     ):
-        filename = mediafile["filename"]
-        read_location = os.path.join(working_dir, filename)
+        identifier = mediafile["identifier"]
+        read_location = os.path.join(working_dir, identifier)
         with open(read_location, "wb") as input_file:
             self.__get_file(
                 self.__get_mediafile_download_link(mediafile, headers),
                 input_file,
                 headers,
             )
-        zipfile.write(read_location, os.path.join(destination_path, filename))
+        zipfile.write(read_location, os.path.join(destination_path, identifier))
 
     def __get_csv_for_objects(
         self, object_ids, object_type="entities", fields=None, headers=None
@@ -162,7 +162,7 @@ class Transcoder(metaclass=Singleton):
 
     def __get_zip_upload_link(self, entity_id, zip_filename, headers=None):
         mediafile = {
-            "filename": zip_filename,
+            "identifier": zip_filename,
             "metadata": list(),
         }
         url = f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
@@ -204,7 +204,7 @@ class Transcoder(metaclass=Singleton):
     ):
         req = requests.post(
             f"{self.collection_api_url}/mediafiles",
-            json={"filename": file_name},
+            json={"identifier": file_name},
             headers={"Accept": "text/uri-list", **self.__get_headers(headers)},
         )
         if req.status_code != 201:
