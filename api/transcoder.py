@@ -170,6 +170,7 @@ class Transcoder(metaclass=Singleton):
         mediafile = {
             "filename": zip_filename,
             "metadata": list(),
+            "relation_properties": {"is_downloadset": True},
         }
         url = f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
         headers = {**{"Accept": "text/uri-list"}, **headers}
