@@ -303,7 +303,12 @@ class Transcoder(metaclass=Singleton):
                 )
                 object_ids = {
                     "entities": request_body.get("entities", list()),
-                    "mediafiles": list(set(request_body.get("mediafiles", list()) + mediafiles_for_entity)),
+                    "mediafiles": list(
+                        set(
+                            request_body.get("mediafiles", list())
+                            + mediafiles_for_entity
+                        )
+                    ),
                 }
                 for object_type, csv_fields_definition_field in {
                     "entities": "csv_entity_columns",
