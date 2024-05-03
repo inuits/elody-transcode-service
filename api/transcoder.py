@@ -38,12 +38,15 @@ class Transcoder(metaclass=Singleton):
             exif[ExifTags.Base.Copyright] = copyrights
 
     def __add_entities_to_zip(self, zipfile, working_dir, entity_ids, headers=None):
+        mediafile_ids = list()
         for entity_id in entity_ids:
             entity_mediafiles = self.__get_entity_mediafiles(entity_id, headers)
             for mediafile in entity_mediafiles.get("results", list()):
+                mediafile_ids.append(self.__get_raw_id(mediafile))
                 self.__add_single_file_to_zip(
                     zipfile, working_dir, mediafile, headers, entity_id
                 )
+        return mediafile_ids
 
     def __add_mediafiles_to_zip(
         self, zipfile, working_dir, mediafile_ids, headers=None
@@ -51,6 +54,7 @@ class Transcoder(metaclass=Singleton):
         for mediafile_id in mediafile_ids:
             mediafile = self.__get_mediafile(mediafile_id, headers)
             self.__add_single_file_to_zip(zipfile, working_dir, mediafile, headers)
+        return mediafile_ids
 
     def __add_objects_csv_to_zip(
         self, zipfile, working_dir, object_ids, object_type, fields=None, headers=None
@@ -79,6 +83,8 @@ class Transcoder(metaclass=Singleton):
     def __get_csv_for_objects(
         self, object_ids, object_type="entities", fields=None, headers=None
     ):
+        if not object_ids:
+            return
         req = requests.get(
             f"{self.collection_api_url}/{object_type}",
             params={"ids": ",".join(object_ids), "field[]": fields},
@@ -289,12 +295,16 @@ class Transcoder(metaclass=Singleton):
                 self.zip_working_dir, f"downloadset-{datetime_string}.zip"
             )
             with ZipFile(zip_location, "w") as zip:
-                self.__add_entities_to_zip(
+                mediafiles_for_entity = self.__add_entities_to_zip(
                     zip, temp_dir, request_body.get("entities", list()), headers
                 )
                 self.__add_mediafiles_to_zip(
                     zip, temp_dir, request_body.get("mediafiles", list()), headers
                 )
+                object_ids = {
+                    "entities": request_body.get("entities", list()),
+                    "mediafiles": list(set(request_body.get("mediafiles", list()) + mediafiles_for_entity)),
+                }
                 for object_type, csv_fields_definition_field in {
                     "entities": "csv_entity_columns",
                     "mediafiles": "csv_mediafile_columns",
@@ -302,7 +312,7 @@ class Transcoder(metaclass=Singleton):
                     self.__add_objects_csv_to_zip(
                         zip,
                         temp_dir,
-                        request_body.get(object_type, list()),
+                        object_ids.get(object_type),
                         object_type,
                         request_body.get(csv_fields_definition_field, list()),
                         headers,
