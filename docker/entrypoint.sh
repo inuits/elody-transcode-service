@@ -22,5 +22,5 @@ if [ "$APP_ENV" = "dev" ]; then
 else
   echo "Starting gunicorn server..."
   cd ~/api
-  exec ~/.local/bin/gunicorn -b 0.0.0.0 --keep-alive 30 "app:app"
+  exec ~/.local/bin/gunicorn -b 0.0.0.0 --keep-alive 30 --access-logfile - --access-logformat '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(M)sms %(b)s "%(f)s" "%(a)s"' "app:app"
 fi
