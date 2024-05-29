@@ -27,7 +27,7 @@ pycparser==2.22
 git+https://github.com/jiaaro/pydub.git
 pytz==2024.1
 rabbitmq-pika-flask==1.2.35
-requests==2.31.0
+requests==2.32.3
 retry==0.9.2
 sentry-sdk[flask]==2.0.1
 six==1.16.0
