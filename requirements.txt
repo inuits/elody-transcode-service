@@ -5,7 +5,7 @@ certifi==2024.6.2
 cffi==1.16.0
 charset-normalizer==3.3.2
 click==8.1.7
-cloudevents==1.10.1
+cloudevents==1.11.0
 cryptography==42.0.8
 decorator==5.1.1
 elody[loader]==0.0.72
