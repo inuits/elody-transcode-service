@@ -9,7 +9,7 @@ cloudevents==1.10.1
 cryptography==42.0.8
 decorator==5.1.1
 elody[loader]==0.0.72
-Flask==3.0.3
+Flask==3.1.0
 Flask-RESTful==0.3.10
 flask-swagger-ui==4.11.1
 gunicorn==22.0.0
