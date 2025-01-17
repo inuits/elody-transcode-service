@@ -169,6 +169,7 @@ class Transcoder(metaclass=Singleton):
     def __get_zip_upload_link(self, entity_id, zip_filename, headers=None):
         mediafile = {
             "filename": zip_filename,
+            "technical_origin": "download",
             "metadata": list(),
             "relation_properties": {"is_downloadset": True},
         }
