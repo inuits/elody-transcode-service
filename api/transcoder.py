@@ -239,7 +239,7 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 201:
             raise Exception(req.text.strip())
 
-    def __upload_transcode(self, mediafile, file_name, file_bytes, headers=None):
+    def __upload_transcode(self, mediafile, file_name, file_bytes, headers=None, parent_job_id=None):
         req = requests.post(
             f"{self.collection_api_url}/tickets",
             json={"filename": file_name},
@@ -248,8 +248,11 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 201:
             raise Exception(req.text.strip())
         ticket_id = req.text.strip().replace('"', "")
+        storage_url = f"{self.storage_api_url}/upload/transcode?id={self.__get_raw_id(mediafile)}&ticket_id={ticket_id}"
+        if parent_job_id:
+            storage_url += f"&parent_job_id={parent_job_id}"
         req = requests.post(
-            f"{self.storage_api_url}/upload/transcode?id={self.__get_raw_id(mediafile)}&ticket_id={ticket_id}",
+            storage_url,
             files={"file": (file_name, file_bytes)},
             headers=self.__get_headers(headers),
         )
@@ -331,7 +334,7 @@ class Transcoder(metaclass=Singleton):
             self.__set_download_entity_progress(download_entity_id, "Finished", headers)
         return zip_location
 
-    def transcode(self, mediafile, operation_name, headers=None):
+    def transcode(self, mediafile, operation_name, headers=None, parent_job_id=None):
         with tempfile.TemporaryDirectory() as temp_dir:
             read_location = os.path.join(temp_dir, mediafile["filename"])
             write_location = os.path.join(
@@ -373,6 +376,7 @@ class Transcoder(metaclass=Singleton):
                         os.path.basename(write_location),
                         output_file,
                         headers,
+                        parent_job_id,
                     )
 
     def transcode_multiple_mediafiles(
