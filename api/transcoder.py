@@ -70,7 +70,7 @@ class Transcoder(metaclass=Singleton):
     def __add_single_file_to_zip(
         self, zipfile, working_dir, mediafile, headers=None, destination_path=""
     ):
-        filename = mediafile["filename"]
+        filename = mediafile["original_filename"]
         read_location = os.path.join(working_dir, filename)
         with open(read_location, "wb") as input_file:
             self.__get_file(
