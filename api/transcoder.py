@@ -87,7 +87,11 @@ class Transcoder(metaclass=Singleton):
             return
         req = requests.get(
             f"{self.collection_api_url}/{object_type}",
-            params={"ids": ",".join(object_ids), "field[]": fields},
+            params={
+                "ids": ",".join(object_ids),
+                "field[]": fields,
+                "exclude_non_editable_fields": True,
+            },
             headers=self.__get_headers({**{"Accept": "text/csv"}, **headers}),
         )
         if req.status_code != 200:
@@ -239,7 +243,9 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 201:
             raise Exception(req.text.strip())
 
-    def __upload_transcode(self, mediafile, file_name, file_bytes, headers=None, parent_job_id=None):
+    def __upload_transcode(
+        self, mediafile, file_name, file_bytes, headers=None, parent_job_id=None
+    ):
         req = requests.post(
             f"{self.collection_api_url}/tickets",
             json={"filename": file_name},
