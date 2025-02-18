@@ -295,15 +295,16 @@ class Transcoder(metaclass=Singleton):
         self.__patch_mediafile(mediafile, data, headers)
 
     def create_zip(self, request_body, headers=None):
-        if download_entity_id := request_body.get("download_entity"):
+        if download_entity_id := request_body.get("download_entity_id"):
             self.__set_download_entity_progress(
                 download_entity_id, "In Progress", headers
             )
         zip_location = None
         with tempfile.TemporaryDirectory() as temp_dir:
             datetime_string = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            download_entity_title = request_body.get("download_entity_title")
             zip_location = os.path.join(
-                self.zip_working_dir, f"downloadset-{datetime_string}.zip"
+                self.zip_working_dir, f"{download_entity_title}-{datetime_string}.zip"
             )
             with ZipFile(zip_location, "w") as zip:
                 mediafiles_for_entity = self.__add_entities_to_zip(
