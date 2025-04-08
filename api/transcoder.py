@@ -447,6 +447,7 @@ class Transcoder(metaclass=Singleton):
         info = c.probe(read_location)
         opts = {
             "format": "mp4",
+            "format_options": ["movflags=+faststart"],
             "video": {
                 "codec": "h264",
                 "width": info.video.video_width,
