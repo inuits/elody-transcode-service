@@ -452,6 +452,7 @@ class Transcoder(metaclass=Singleton):
                 "width": info.video.video_width,
                 "height": info.video.video_height,
                 "fps": info.video.video_fps,
+                "ffmpeg_skin_opts": "-movflags +faststart",
             },
         }
         if info.audio:
