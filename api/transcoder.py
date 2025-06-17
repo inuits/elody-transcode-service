@@ -180,7 +180,7 @@ class Transcoder(metaclass=Singleton):
         url = f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
         headers = {**{"Accept": "text/uri-list"}, **headers}
         req = requests.post(url, json=mediafile, headers=headers)
-        return req.text.strip()
+        return req.text.strip().replace('"', "")
 
     def __patch_mediafile(self, mediafile, payload, headers):
         req = requests.patch(
@@ -188,7 +188,7 @@ class Transcoder(metaclass=Singleton):
             json=payload,
             headers=self.__get_headers(headers),
         )
-        if req.status_code != 201:
+        if req.status_code != 200:
             raise Exception(req.text.strip())
 
     def __set_download_entity_progress(
@@ -198,7 +198,6 @@ class Transcoder(metaclass=Singleton):
             {
                 "key": "status",
                 "value": progress,
-                "lang": "en",
             }
         ]
         req = requests.patch(
@@ -206,7 +205,7 @@ class Transcoder(metaclass=Singleton):
             json=payload,
             headers=self.__get_headers(headers),
         )
-        if req.status_code != 201:
+        if req.status_code != 200:
             app.logger.info(
                 f"Failed report progress on download entity, status code: {req.status_code}"
             )

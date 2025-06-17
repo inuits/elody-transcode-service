@@ -19,9 +19,13 @@ def __do_transcode(body, operation, mimetypes, error_message):
         return
     try:
         if "headers" in data:
-            Transcoder().transcode(data["mediafile"], operation, data.get("headers"), parent_job_id)
+            Transcoder().transcode(
+                data["mediafile"], operation, data.get("headers"), parent_job_id
+            )
         else:
-            Transcoder().transcode(data["mediafile"], operation, parent_job_id=parent_job_id)
+            Transcoder().transcode(
+                data["mediafile"], operation, parent_job_id=parent_job_id
+            )
     except Exception as ex:
         app.logger.error(f'{error_message.format(data["mediafile"]["filename"])} {ex}')
 
