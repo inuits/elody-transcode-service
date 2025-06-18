@@ -1,12 +1,12 @@
 import app
 import os
 
-from app import policy_factory
 from cloudevents.conversion import to_dict
 from cloudevents.http import CloudEvent
 from flask import request
 from flask_restful import abort, Resource
 from inuits_policy_based_auth import RequestContext
+from policy_factory import authenticate, get_user_context
 from transcoder import Transcoder
 
 
@@ -32,11 +32,13 @@ class BaseTranscode(Resource):
         self.__is_malformed_message(content, ["mediafile", "mimetype"], mimetypes)
         if operation == "mp3" and content["mimetype"] == "audio/mpeg":
             abort(400, message=f'{content["mediafile"]["filename"]} is already an mp3')
+        user_email = get_user_context().id
         try:
             Transcoder().transcode(
                 content["mediafile"],
                 operation,
                 self._get_auth_headers(),
+                user_email=user_email,
             )
         except Exception as ex:
             return str(ex), 400
@@ -44,25 +46,25 @@ class BaseTranscode(Resource):
 
 
 class JpegTranscode(BaseTranscode):
-    @policy_factory.authenticate(RequestContext(request))
+    @authenticate(RequestContext(request))
     def post(self):
         return super().post("jpg", ["image/"], "Successfully transcoded {} to jpeg")
 
 
 class MP3Transcode(BaseTranscode):
-    @policy_factory.authenticate(RequestContext(request))
+    @authenticate(RequestContext(request))
     def post(self):
         return super().post("mp3", ["audio/"], "Successfully transcoded {} to mp3")
 
 
 class MP4Transcode(BaseTranscode):
-    @policy_factory.authenticate(RequestContext(request))
+    @authenticate(RequestContext(request))
     def post(self):
         return super().post("mp4", ["video/"], "Successfully transcoded {} to mp4")
 
 
 class WidthHeightTranscode(BaseTranscode):
-    @policy_factory.authenticate(RequestContext(request))
+    @authenticate(RequestContext(request))
     def post(self):
         return super().post(
             "width_height", ["image/", "video/"], "Successfully added {} width & height"
@@ -70,16 +72,18 @@ class WidthHeightTranscode(BaseTranscode):
 
 
 class PDFTranscode(BaseTranscode):
-    @policy_factory.authenticate(RequestContext(request))
+    @authenticate(RequestContext(request))
     def post(self):
         content = self._get_request_body()
         master_entity_id = request.args.get("master_entity_id", "", str)
+        user_email = get_user_context().id
         try:
             Transcoder().transcode_multiple_mediafiles(
                 content["mediafiles"],
                 "pdf",
                 self._get_auth_headers(),
                 master_entity_id,
+                user_email=user_email,
             )
         except Exception as ex:
             return str(ex), 400
@@ -90,11 +94,12 @@ class PDFTranscode(BaseTranscode):
 
 
 class ZipTranscode(BaseTranscode):
-    @policy_factory.authenticate(RequestContext(request))
+    @authenticate(RequestContext(request))
     def post(self):
         attributes = {"type": "dams.create_zip", "source": "dams"}
         data = self._get_request_body()
         data["auth_headers"] = self._get_auth_headers()
+        data["user_email"] = get_user_context().id
         event = to_dict(CloudEvent(attributes, data))
         app.rabbit.send(event, routing_key="dams.create_zip")
         return (

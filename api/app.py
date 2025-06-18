@@ -3,13 +3,11 @@ import logging
 import os
 import secrets
 
-from elody.loader import load_policies
 from flask import Flask
 from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
-from importlib import import_module
-from inuits_policy_based_auth import PolicyFactory
+from policy_factory import init_policy_factory
 from rabbitmq_pika_flask import RabbitMQ
 
 if os.getenv("SENTRY_ENABLED", False) in ["True", "true", True]:
@@ -57,12 +55,7 @@ if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
     health.add_check(rabbit_available)
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
-policy_factory = PolicyFactory()
-try:
-    module = import_module("apps.permissions")
-    load_policies(policy_factory, logger, module.PERMISSIONS)
-except ModuleNotFoundError:
-    load_policies(policy_factory, logger)
+init_policy_factory()
 
 from resources.spec import AsyncAPISpec, OpenAPISpec
 from resources.transcode import (

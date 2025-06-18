@@ -33,10 +33,10 @@ def __do_transcode(body, operation, mimetypes, error_message):
 @app.rabbit.queue("dams.create_zip")
 def create_zip(routing_key, body, message_id):
     data = body["data"]
+    user_email = data.pop("user_email", None)
     try:
         zip_location = Transcoder().create_zip(
-            data,
-            data["auth_headers"],
+            data, data["auth_headers"], user_email=user_email
         )
     except Exception as ex:
         app.logger.error(f"Could not create ZIP-file {ex}")

@@ -37,23 +37,32 @@ class Transcoder(metaclass=Singleton):
         if copyrights:
             exif[ExifTags.Base.Copyright] = copyrights
 
-    def __add_entities_to_zip(self, zipfile, working_dir, entity_ids, headers=None):
+    def __add_entities_to_zip(
+        self, zipfile, working_dir, entity_ids, headers=None, user_email=None
+    ):
         mediafile_ids = list()
         for entity_id in entity_ids:
             entity_mediafiles = self.__get_entity_mediafiles(entity_id, headers)
             for mediafile in entity_mediafiles.get("results", list()):
                 mediafile_ids.append(self.__get_raw_id(mediafile))
                 self.__add_single_file_to_zip(
-                    zipfile, working_dir, mediafile, headers, entity_id
+                    zipfile,
+                    working_dir,
+                    mediafile,
+                    headers,
+                    entity_id,
+                    user_email=user_email,
                 )
         return mediafile_ids
 
     def __add_mediafiles_to_zip(
-        self, zipfile, working_dir, mediafile_ids, headers=None
+        self, zipfile, working_dir, mediafile_ids, headers=None, user_email=None
     ):
         for mediafile_id in mediafile_ids:
             mediafile = self.__get_mediafile(mediafile_id, headers)
-            self.__add_single_file_to_zip(zipfile, working_dir, mediafile, headers)
+            self.__add_single_file_to_zip(
+                zipfile, working_dir, mediafile, headers, user_email=user_email
+            )
         return mediafile_ids
 
     def __add_objects_csv_to_zip(
@@ -68,13 +77,21 @@ class Transcoder(metaclass=Singleton):
             zipfile.write(objects_csv_path, f"{object_type}.csv")
 
     def __add_single_file_to_zip(
-        self, zipfile, working_dir, mediafile, headers=None, destination_path=""
+        self,
+        zipfile,
+        working_dir,
+        mediafile,
+        headers=None,
+        destination_path="",
+        user_email=None,
     ):
         filename = mediafile["original_filename"]
         read_location = os.path.join(working_dir, filename)
         with open(read_location, "wb") as input_file:
             self.__get_file(
-                self.__get_mediafile_download_link(mediafile, headers),
+                self.__get_mediafile_download_link(
+                    mediafile, headers, user_email=user_email
+                ),
                 input_file,
                 headers,
             )
@@ -162,15 +179,18 @@ class Transcoder(metaclass=Singleton):
             )
         return req.json()
 
-    def __get_mediafile_download_link(self, mediafile, headers=None):
+    def __get_mediafile_download_link(self, mediafile, headers=None, user_email=None):
         mediafile = self.__get_mediafile(self.__get_raw_id(mediafile))
         parsed_uri = urlparse(mediafile.get("original_file_location"))
-        return f"{self.storage_api_url.replace('/storage/v1', '')}{parsed_uri.path}?{parsed_uri.query}"
+        user_email_parameter = f"&user_email={user_email}" if user_email else ""
+        return f"{self.storage_api_url.replace('/storage/v1', '')}{parsed_uri.path}?{parsed_uri.query}{user_email_parameter}"
 
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
 
-    def __get_zip_upload_link(self, entity_id, zip_filename, headers=None):
+    def __get_zip_upload_link(
+        self, entity_id, zip_filename, headers=None, user_email=None
+    ):
         mediafile = {
             "filename": zip_filename,
             "technical_origin": "download",
@@ -180,7 +200,7 @@ class Transcoder(metaclass=Singleton):
         url = f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
         headers = {**{"Accept": "text/uri-list"}, **headers}
         req = requests.post(url, json=mediafile, headers=headers)
-        return req.text.strip().replace('"', "")
+        return req.text.strip().replace('"', "") + f"&user_email={user_email}"
 
     def __patch_mediafile(self, mediafile, payload, headers):
         req = requests.patch(
@@ -265,11 +285,14 @@ class Transcoder(metaclass=Singleton):
             raise Exception(req.text.strip())
 
     def __upload_zip_to_download_entity(
-        self, download_entity_id, zip_location, headers=None
+        self, download_entity_id, zip_location, headers=None, user_email=None
     ):
         with open(zip_location, "rb") as zip:
             zip_upload_link = self.__get_zip_upload_link(
-                download_entity_id, os.path.basename(zip_location), headers
+                download_entity_id,
+                os.path.basename(zip_location),
+                headers,
+                user_email=user_email,
             )
             req = requests.post(zip_upload_link, files={"file": zip})
             if req.status_code != 201:
@@ -293,7 +316,7 @@ class Transcoder(metaclass=Singleton):
             raise Exception("Could not get width and/or height")
         self.__patch_mediafile(mediafile, data, headers)
 
-    def create_zip(self, request_body, headers=None):
+    def create_zip(self, request_body, headers=None, user_email=None):
         if download_entity_id := request_body.get("download_entity_id"):
             self.__set_download_entity_progress(
                 download_entity_id, "In Progress", headers
@@ -307,10 +330,18 @@ class Transcoder(metaclass=Singleton):
             )
             with ZipFile(zip_location, "w") as zip:
                 mediafiles_for_entity = self.__add_entities_to_zip(
-                    zip, temp_dir, request_body.get("entities", list()), headers
+                    zip,
+                    temp_dir,
+                    request_body.get("entities", list()),
+                    headers,
+                    user_email=user_email,
                 )
                 self.__add_mediafiles_to_zip(
-                    zip, temp_dir, request_body.get("mediafiles", list()), headers
+                    zip,
+                    temp_dir,
+                    request_body.get("mediafiles", list()),
+                    headers,
+                    user_email=user_email,
                 )
                 object_ids = {
                     "entities": request_body.get("entities", list()),
@@ -335,12 +366,19 @@ class Transcoder(metaclass=Singleton):
                     )
         if download_entity_id:
             self.__upload_zip_to_download_entity(
-                download_entity_id, zip_location, headers
+                download_entity_id, zip_location, headers, user_email=user_email
             )
             self.__set_download_entity_progress(download_entity_id, "Finished", headers)
         return zip_location
 
-    def transcode(self, mediafile, operation_name, headers=None, parent_job_id=None):
+    def transcode(
+        self,
+        mediafile,
+        operation_name,
+        headers=None,
+        parent_job_id=None,
+        user_email=None,
+    ):
         with tempfile.TemporaryDirectory() as temp_dir:
             read_location = os.path.join(temp_dir, mediafile["filename"])
             write_location = os.path.join(
@@ -370,7 +408,9 @@ class Transcoder(metaclass=Singleton):
                 raise Exception(f"Operation {operation_name} not supported")
             with open(read_location, "wb") as input_file:
                 self.__get_file(
-                    self.__get_mediafile_download_link(mediafile, headers),
+                    self.__get_mediafile_download_link(
+                        mediafile, headers, user_email=user_email
+                    ),
                     input_file,
                     headers,
                 )
@@ -386,7 +426,12 @@ class Transcoder(metaclass=Singleton):
                     )
 
     def transcode_multiple_mediafiles(
-        self, mediafiles, operation_name, headers=None, master_entity_id=None
+        self,
+        mediafiles,
+        operation_name,
+        headers=None,
+        master_entity_id=None,
+        user_email=None,
     ):
         with tempfile.TemporaryDirectory() as temp_dir:
             write_location = os.path.join(
@@ -405,7 +450,9 @@ class Transcoder(metaclass=Singleton):
                 read_location = os.path.join(temp_dir, mediafile["filename"])
                 with open(read_location, "wb") as input_file:
                     self.__get_file(
-                        self.__get_mediafile_download_link(mediafile, headers),
+                        self.__get_mediafile_download_link(
+                            mediafile, headers, user_email=user_email
+                        ),
                         input_file,
                         headers,
                     )
