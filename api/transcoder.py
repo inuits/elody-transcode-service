@@ -208,7 +208,7 @@ class Transcoder(metaclass=Singleton):
             json=payload,
             headers=self.__get_headers(headers),
         )
-        if req.status_code != 200:
+        if req.status_code not in (200, 201, 204):
             raise Exception(req.text.strip())
 
     def __set_download_entity_progress(

@@ -52,7 +52,7 @@ def rabbit_available():
 
 health = HealthCheck()
 if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
-    health.add_check(rabbit_available)
+    health.add_check(rabbit.check_health)
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
 init_policy_factory()
