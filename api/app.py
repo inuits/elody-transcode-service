@@ -45,14 +45,13 @@ app.register_blueprint(swaggerui_blueprint)
 def rabbit_available():
     connection = rabbit.get_connection()
     if connection.is_open:
-        connection.close()
         return True, "Successfully reached RabbitMQ"
     return False, "Failed to reach RabbitMQ"
 
 
 health = HealthCheck()
 if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
-    health.add_check(rabbit.check_health)
+    health.add_check(rabbit_available)
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
 init_policy_factory()
