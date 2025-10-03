@@ -1,6 +1,7 @@
 import app
 
 from transcoder import Transcoder
+from rabbit import get_rabbit
 
 
 def __is_malformed_message(data, fields, mimetypes):
@@ -30,7 +31,7 @@ def __do_transcode(body, operation, mimetypes, error_message):
         app.logger.error(f'{error_message.format(data["mediafile"]["filename"])} {ex}')
 
 
-@app.rabbit.queue("dams.create_zip")
+@get_rabbit().queue("dams.create_zip")
 def create_zip(routing_key, body, message_id):
     data = body["data"]
     user_email = data.pop("user_email", None)
@@ -42,7 +43,7 @@ def create_zip(routing_key, body, message_id):
         app.logger.error(f"Could not create ZIP-file {ex}")
 
 
-@app.rabbit.queue("dams.file_uploaded")
+@get_rabbit().queue("dams.file_uploaded")
 def transcode_add_width_height(routing_key, body, message_id):
     __do_transcode(
         body,
@@ -52,16 +53,16 @@ def transcode_add_width_height(routing_key, body, message_id):
     )
 
 
-@app.rabbit.queue("dams.file_uploaded")
+@get_rabbit().queue("dams.file_uploaded")
 def transcode_to_jpeg(routing_key, body, message_id):
     __do_transcode(body, "jpg", ["image/"], "Transcoding {} to jpeg failed with:")
 
 
-@app.rabbit.queue("dams.file_uploaded")
+@get_rabbit().queue("dams.file_uploaded")
 def transcode_to_mp3(routing_key, body, message_id):
     __do_transcode(body, "mp3", ["audio/"], "Transcoding {} to mp3 failed with:")
 
 
-@app.rabbit.queue("dams.file_uploaded")
+@get_rabbit().queue("dams.file_uploaded")
 def transcode_to_mp4(routing_key, body, message_id):
     __do_transcode(body, "mp4", ["video/"], "Transcoding {} to mp4 failed with:")

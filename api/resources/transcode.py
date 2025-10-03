@@ -1,4 +1,3 @@
-import app
 import os
 
 from cloudevents.conversion import to_dict
@@ -8,6 +7,7 @@ from flask_restful import abort, Resource
 from inuits_policy_based_auth import RequestContext
 from policy_factory import authenticate, get_user_context
 from transcoder import Transcoder
+from rabbit import get_rabbit
 
 
 class BaseTranscode(Resource):
@@ -101,7 +101,7 @@ class ZipTranscode(BaseTranscode):
         data["auth_headers"] = self._get_auth_headers()
         data["user_email"] = get_user_context().id
         event = to_dict(CloudEvent(attributes, data))
-        app.rabbit.send(event, routing_key="dams.create_zip")
+        get_rabbit().send(event, routing_key="dams.create_zip")
         return (
             "ZIP creation job place on the queue",
             201,

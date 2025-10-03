@@ -8,7 +8,8 @@ from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
 from policy_factory import init_policy_factory
-from rabbitmq_pika_flask import RabbitMQ
+# from rabbitmq_pika_flask import RabbitMQ
+from rabbit import init_rabbit, get_rabbit
 
 if os.getenv("SENTRY_ENABLED", False) in ["True", "true", True]:
     import sentry_sdk
@@ -36,14 +37,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-rabbit = RabbitMQ()
-rabbit.init_app(app, "basic", json.loads, json.dumps)
+init_rabbit(app)
 
 app.register_blueprint(swaggerui_blueprint)
 
 
 def rabbit_available():
-    connection = rabbit.get_connection()
+    connection = get_rabbit().get_connection()
     if connection.is_open:
         return True, "Successfully reached RabbitMQ"
     return False, "Failed to reach RabbitMQ"
