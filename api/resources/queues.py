@@ -15,7 +15,7 @@ def __is_malformed_message(data, fields, mimetypes):
 
 
 queue_prefix = getenv("QUEUE_PREFIX", "basic")
-queue_type = getenv("QUEUE_TYPE", "quorum")
+# queue_type = getenv("QUEUE_TYPE", "classic")
 routing_key_prefix = getenv("ROUTING_KEY_PREFIX", "dams")
 
 
@@ -23,8 +23,8 @@ def __argument_wrapper(*, queue_name, routing_key):
     arguments = {"routing_key": routing_key}
     if getenv("AMQP_MANAGER", "amqpstorm_flask") == "amqpstorm_flask":
         arguments["queue_name"] = queue_name
-        if queue_type:
-            arguments["queue_arguments"] = {"x-queue-type": queue_type}
+        # if queue_type:
+        #     arguments["queue_arguments"] = {"x-queue-type": queue_type}
     return arguments
 
 
@@ -62,7 +62,7 @@ def create_zip(routing_key, body, message_id):
 
 @get_rabbit().queue(
     **__argument_wrapper(
-        queue_name="basic.transcode.add.widht.height", routing_key="dams.file_uploaded"
+        queue_name="basic.transcode.add.width.height", routing_key="dams.file_uploaded"
     )
 )
 def transcode_add_width_height(routing_key, body, message_id):
