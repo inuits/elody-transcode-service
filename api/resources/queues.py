@@ -2,6 +2,7 @@ import app
 
 from transcoder import Transcoder
 from rabbit import get_rabbit
+from os import getenv
 
 
 def __is_malformed_message(data, fields, mimetypes):
@@ -11,6 +12,20 @@ def __is_malformed_message(data, fields, mimetypes):
     if not any(x in data["mediafile"]["mimetype"] for x in mimetypes):
         return True
     return False
+
+
+def __argument_wrapper(*, queue_name, routing_key):
+    arguments = {"routing_key": routing_key}
+    if getenv("AMQP_MANAGER", "amqpstorm_flask") == "amqpstorm_flask":
+        arguments["queue_name"] = queue_name
+        if queue_type:
+            arguments["queue_arguments"] = {"x-queue-type": queue_type}
+    return arguments
+
+
+queue_prefix = getenv("QUEUE_PREFIX", "basic")
+queue_type = getenv("QUEUE_TYPE")
+routing_key_prefix = getenv("ROUTING_KEY_PREFIX", "dams")
 
 
 def __do_transcode(body, operation, mimetypes, error_message):
@@ -31,7 +46,9 @@ def __do_transcode(body, operation, mimetypes, error_message):
         app.logger.error(f'{error_message.format(data["mediafile"]["filename"])} {ex}')
 
 
-@get_rabbit().queue("dams.create_zip")
+@get_rabbit().queue(
+    **__argument_wrapper(queue_name="basic.create_zip", routing_key="dams.create_zip")
+)
 def create_zip(routing_key, body, message_id):
     data = body["data"]
     user_email = data.pop("user_email", None)
@@ -43,7 +60,11 @@ def create_zip(routing_key, body, message_id):
         app.logger.error(f"Could not create ZIP-file {ex}")
 
 
-@get_rabbit().queue("dams.file_uploaded")
+@get_rabbit().queue(
+    **__argument_wrapper(
+        queue_name="basic.transcode.add.widht.height", routing_key="dams.file_uploaded"
+    )
+)
 def transcode_add_width_height(routing_key, body, message_id):
     __do_transcode(
         body,
@@ -53,16 +74,28 @@ def transcode_add_width_height(routing_key, body, message_id):
     )
 
 
-@get_rabbit().queue("dams.file_uploaded")
+@get_rabbit().queue(
+    **__argument_wrapper(
+        queue_name="basic.transcode.to.jpeg", routing_key="dams.file_uploaded"
+    )
+)
 def transcode_to_jpeg(routing_key, body, message_id):
     __do_transcode(body, "jpg", ["image/"], "Transcoding {} to jpeg failed with:")
 
 
-@get_rabbit().queue("dams.file_uploaded")
+@get_rabbit().queue(
+    **__argument_wrapper(
+        queue_name="basic.transcode.to.mp3", routing_key="dams.file_uploaded"
+    )
+)
 def transcode_to_mp3(routing_key, body, message_id):
     __do_transcode(body, "mp3", ["audio/"], "Transcoding {} to mp3 failed with:")
 
 
-@get_rabbit().queue("dams.file_uploaded")
+@get_rabbit().queue(
+    **__argument_wrapper(
+        queue_name="basic.transcode.to.mp4", routing_key="dams.file_uploaded"
+    )
+)
 def transcode_to_mp4(routing_key, body, message_id):
     __do_transcode(body, "mp4", ["video/"], "Transcoding {} to mp4 failed with:")
