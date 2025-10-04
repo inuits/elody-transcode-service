@@ -14,6 +14,11 @@ def __is_malformed_message(data, fields, mimetypes):
     return False
 
 
+queue_prefix = getenv("QUEUE_PREFIX", "basic")
+queue_type = getenv("QUEUE_TYPE", "quorum")
+routing_key_prefix = getenv("ROUTING_KEY_PREFIX", "dams")
+
+
 def __argument_wrapper(*, queue_name, routing_key):
     arguments = {"routing_key": routing_key}
     if getenv("AMQP_MANAGER", "amqpstorm_flask") == "amqpstorm_flask":
@@ -21,11 +26,6 @@ def __argument_wrapper(*, queue_name, routing_key):
         if queue_type:
             arguments["queue_arguments"] = {"x-queue-type": queue_type}
     return arguments
-
-
-queue_prefix = getenv("QUEUE_PREFIX", "basic")
-queue_type = getenv("QUEUE_TYPE")
-routing_key_prefix = getenv("ROUTING_KEY_PREFIX", "dams")
 
 
 def __do_transcode(body, operation, mimetypes, error_message):
