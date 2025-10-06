@@ -47,7 +47,7 @@ def __do_transcode(body, operation, mimetypes, error_message):
 
 
 @get_rabbit().queue(
-    **__argument_wrapper(queue_name="basic.create_zip", routing_key="dams.create_zip")
+    **__argument_wrapper(queue_name="basic.create.zip", routing_key="dams.create_zip")
 )
 def create_zip(routing_key, body, message_id):
     data = body["data"]
