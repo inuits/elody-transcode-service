@@ -15,7 +15,7 @@ def __is_malformed_message(data, fields, mimetypes):
 
 
 queue_prefix = getenv("QUEUE_PREFIX", "basic")
-queue_type = getenv("QUEUE_TYPE", "quorum")
+queue_type = getenv("QUEUE_TYPE", "classic")
 routing_key_prefix = getenv("ROUTING_KEY_PREFIX", "dams")
 
 
