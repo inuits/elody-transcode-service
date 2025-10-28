@@ -47,7 +47,10 @@ def __do_transcode(body, operation, mimetypes, error_message):
 
 
 @get_rabbit().queue(
-    **__argument_wrapper(queue_name="basic.create.zip", routing_key="dams.create_zip")
+    **__argument_wrapper(
+        queue_name=f"{queue_prefix}.create.zip",
+        routing_key=f"{routing_key_prefix}.create_zip",
+    )
 )
 def create_zip(routing_key, body, message_id):
     data = body["data"]
@@ -62,7 +65,8 @@ def create_zip(routing_key, body, message_id):
 
 @get_rabbit().queue(
     **__argument_wrapper(
-        queue_name="basic.transcode.add.width.height", routing_key="dams.file_uploaded"
+        queue_name=f"{queue_prefix}.transcode.add.width.height",
+        routing_key=f"{routing_key_prefix}.file_uploaded",
     )
 )
 def transcode_add_width_height(routing_key, body, message_id):
@@ -76,7 +80,8 @@ def transcode_add_width_height(routing_key, body, message_id):
 
 @get_rabbit().queue(
     **__argument_wrapper(
-        queue_name="basic.transcode.to.jpeg", routing_key="dams.file_uploaded"
+        queue_name=f"{queue_prefix}.transcode.to.jpeg",
+        routing_key=f"{routing_key_prefix}.file_uploaded",
     )
 )
 def transcode_to_jpeg(routing_key, body, message_id):
@@ -85,7 +90,8 @@ def transcode_to_jpeg(routing_key, body, message_id):
 
 @get_rabbit().queue(
     **__argument_wrapper(
-        queue_name="basic.transcode.to.mp3", routing_key="dams.file_uploaded"
+        queue_name=f"{queue_prefix}.transcode.to.mp3",
+        routing_key=f"{routing_key_prefix}.file_uploaded",
     )
 )
 def transcode_to_mp3(routing_key, body, message_id):
@@ -94,7 +100,8 @@ def transcode_to_mp3(routing_key, body, message_id):
 
 @get_rabbit().queue(
     **__argument_wrapper(
-        queue_name="basic.transcode.to.mp4", routing_key="dams.file_uploaded"
+        queue_name=f"{queue_prefix}.transcode.to.mp4",
+        routing_key=f"{routing_key_prefix}.file_uploaded",
     )
 )
 def transcode_to_mp4(routing_key, body, message_id):
