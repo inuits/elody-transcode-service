@@ -1,8 +1,10 @@
 import app
+from policy_factory import get_user_context
 
+from elody.job import fail_job, finish_job, init_job, start_job
 from transcoder import Transcoder
 from rabbit import get_rabbit
-from os import getenv
+from os import error, getenv
 
 
 def __is_malformed_message(data, fields, mimetypes):
@@ -33,7 +35,16 @@ def __do_transcode(body, operation, mimetypes, error_message):
     parent_job_id = data.get("parent_job_id")
     if __is_malformed_message(data, ["mediafile", "mimetype"], mimetypes):
         return
+
+    job_id = init_job(
+        name=f"Transcode {data['mediafile']['original_filename']}",
+        job_type=f"Transcode {operation}",
+        get_rabbit=get_rabbit,
+        user_email=data.get("user_email", "developers@inuits.eu"),
+        parent_id=parent_job_id,
+    )
     try:
+        start_job(job_id, get_rabbit=get_rabbit)
         if "headers" in data:
             Transcoder().transcode(
                 data["mediafile"], operation, data.get("headers"), parent_job_id
@@ -42,8 +53,11 @@ def __do_transcode(body, operation, mimetypes, error_message):
             Transcoder().transcode(
                 data["mediafile"], operation, parent_job_id=parent_job_id
             )
+        finish_job(job_id, get_rabbit=get_rabbit)
     except Exception as ex:
-        app.logger.error(f'{error_message.format(data["mediafile"]["filename"])} {ex}')
+        error_message = f'{error_message.format(data["mediafile"]["filename"])} {ex}'
+        fail_job(job_id, get_rabbit=get_rabbit, exception_message=error_message)
+        app.logger.error(error_message)
 
 
 @get_rabbit().queue(
