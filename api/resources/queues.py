@@ -33,6 +33,7 @@ def __argument_wrapper(*, queue_name, routing_key):
 def __do_transcode(body, operation, mimetypes, error_message):
     data = body["data"]
     parent_job_id = data.get("parent_job_id")
+    ignore_duplicates = bool(data.get("ignore_duplicates", False))
     if __is_malformed_message(data, ["mediafile", "mimetype"], mimetypes):
         return
 
@@ -47,11 +48,18 @@ def __do_transcode(body, operation, mimetypes, error_message):
         start_job(job_id, get_rabbit=get_rabbit)
         if "headers" in data:
             Transcoder().transcode(
-                data["mediafile"], operation, data.get("headers"), parent_job_id
+                data["mediafile"],
+                operation,
+                data.get("headers"),
+                parent_job_id,
+                ignore_duplicate_check=ignore_duplicates,
             )
         else:
             Transcoder().transcode(
-                data["mediafile"], operation, parent_job_id=parent_job_id
+                data["mediafile"],
+                operation,
+                parent_job_id=parent_job_id,
+                ignore_duplicate_check=ignore_duplicates,
             )
         finish_job(job_id, get_rabbit=get_rabbit)
     except Exception as ex:
@@ -80,7 +88,10 @@ def create_zip(routing_key, body, message_id):
 @get_rabbit().queue(
     **__argument_wrapper(
         queue_name=f"{queue_prefix}.transcode.add.width.height",
-        routing_key=f"{routing_key_prefix}.file_uploaded",
+        routing_key=[
+            f"{routing_key_prefix}.file_uploaded",
+            f"{routing_key_prefix}.regenerate_transcode",
+        ],
     )
 )
 def transcode_add_width_height(routing_key, body, message_id):
@@ -95,7 +106,10 @@ def transcode_add_width_height(routing_key, body, message_id):
 @get_rabbit().queue(
     **__argument_wrapper(
         queue_name=f"{queue_prefix}.transcode.to.jpeg",
-        routing_key=f"{routing_key_prefix}.file_uploaded",
+        routing_key=[
+            f"{routing_key_prefix}.file_uploaded",
+            f"{routing_key_prefix}.regenerate_transcode",
+        ],
     )
 )
 def transcode_to_jpeg(routing_key, body, message_id):
@@ -105,7 +119,10 @@ def transcode_to_jpeg(routing_key, body, message_id):
 @get_rabbit().queue(
     **__argument_wrapper(
         queue_name=f"{queue_prefix}.transcode.to.mp3",
-        routing_key=f"{routing_key_prefix}.file_uploaded",
+        routing_key=[
+            f"{routing_key_prefix}.file_uploaded",
+            f"{routing_key_prefix}.regenerate_transcode",
+        ],
     )
 )
 def transcode_to_mp3(routing_key, body, message_id):
@@ -115,7 +132,10 @@ def transcode_to_mp3(routing_key, body, message_id):
 @get_rabbit().queue(
     **__argument_wrapper(
         queue_name=f"{queue_prefix}.transcode.to.mp4",
-        routing_key=f"{routing_key_prefix}.file_uploaded",
+        routing_key=[
+            f"{routing_key_prefix}.file_uploaded",
+            f"{routing_key_prefix}.regenerate_transcode",
+        ],
     )
 )
 def transcode_to_mp4(routing_key, body, message_id):

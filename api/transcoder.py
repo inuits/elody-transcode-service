@@ -263,7 +263,13 @@ class Transcoder(metaclass=Singleton):
             raise Exception(req.text.strip())
 
     def __upload_transcode(
-        self, mediafile, file_name, file_bytes, headers=None, parent_job_id=None
+        self,
+        mediafile,
+        file_name,
+        file_bytes,
+        headers=None,
+        parent_job_id=None,
+        ignore_duplicate_check=False,
     ):
         req = requests.post(
             f"{self.collection_api_url}/tickets",
@@ -273,7 +279,7 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 201:
             raise Exception(req.text.strip())
         ticket_id = req.text.strip().replace('"', "")
-        storage_url = f"{self.storage_api_url}/upload/transcode?id={self.__get_raw_id(mediafile)}&ticket_id={ticket_id}"
+        storage_url = f"{self.storage_api_url}/upload/transcode?id={self.__get_raw_id(mediafile)}&ticket_id={ticket_id}&ignore_duplicate_check={ignore_duplicate_check}"
         if parent_job_id:
             storage_url += f"&parent_job_id={parent_job_id}"
         req = requests.post(
@@ -378,6 +384,7 @@ class Transcoder(metaclass=Singleton):
         headers=None,
         parent_job_id=None,
         user_email=None,
+        ignore_duplicate_check=False,
     ):
         with tempfile.TemporaryDirectory() as temp_dir:
             read_location = os.path.join(temp_dir, mediafile["filename"])
@@ -423,6 +430,7 @@ class Transcoder(metaclass=Singleton):
                         output_file,
                         headers,
                         parent_job_id,
+                        ignore_duplicate_check=ignore_duplicate_check,
                     )
 
     def transcode_multiple_mediafiles(
