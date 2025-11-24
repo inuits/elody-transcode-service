@@ -1,7 +1,7 @@
 import app
 from policy_factory import get_user_context
 
-from elody.job import fail_job, finish_job, init_job, start_job
+from elody.job import fail_job, finish_job, init_job, start_job, add_document_to_job
 from transcoder import Transcoder
 from rabbit import get_rabbit
 from os import error, getenv
@@ -61,6 +61,12 @@ def __do_transcode(body, operation, mimetypes, error_message):
                 parent_job_id=parent_job_id,
                 ignore_duplicate_check=ignore_duplicates,
             )
+
+        add_document_to_job(
+            id=job_id,
+            id_of_document_job_was_initiated_for=data["mediafile"]["_id"],
+            get_rabbit=get_rabbit,
+        )
         finish_job(job_id, get_rabbit=get_rabbit)
     except Exception as ex:
         error_message = f'{error_message.format(data["mediafile"]["filename"])} {ex}'
