@@ -1,7 +1,14 @@
 import app
 from policy_factory import get_user_context
 
-from elody.job import fail_job, finish_job, init_job, start_job, add_document_to_job
+from elody.job import (
+    fail_job,
+    finish_job,
+    init_job,
+    start_job,
+    add_document_to_job,
+    finish_job_with_warning,
+)
 from transcoder import Transcoder
 from rabbit import get_rabbit
 from os import error, getenv
@@ -28,6 +35,39 @@ def __argument_wrapper(*, queue_name, routing_key):
         if queue_type:
             arguments["queue_arguments"] = {"x-queue-type": queue_type}
     return arguments
+
+
+def __handle_transcode_message(body):
+    mimetypes_transcode_mapping = {
+        "image": ["transcode_add_width_height", "transcode_to_jpeg"],
+        "audio": ["transcode_to_mp3"],
+        "video": ["transcode_add_width_height", "transcode_to_mp4"],
+    }
+
+    data = body["data"]
+    parent_job_id = data.get("parent_job_id")
+    mimetype: str = data["mediafile"]["mimetype"]
+    mimetype_start = mimetype.split("/")[0]
+
+    routing_keys = mimetypes_transcode_mapping.get(mimetype_start, [])
+    if not routing_keys:
+        if parent_job_id:
+
+            job_id = init_job(
+                name=f"Transcode {data['mediafile']['original_filename']}",
+                job_type="Transcode Unsupported Format",
+                get_rabbit=get_rabbit,
+                user_email=data.get("user_email", "developers@inuits.eu"),
+                parent_id=parent_job_id,
+            )
+            finish_job_with_warning(
+                job_id,
+                get_rabbit=get_rabbit,
+                info_message=f"Generating transcode for mimetypes {mimetype} currently not supported",
+            )
+        # TODO: Log this normally as well
+    for routing_key in routing_keys:
+        get_rabbit().send(body, routing_key=f"{routing_key_prefix}.{routing_key}")
 
 
 def __do_transcode(body, operation, mimetypes, error_message):
@@ -76,6 +116,19 @@ def __do_transcode(body, operation, mimetypes, error_message):
 
 @get_rabbit().queue(
     **__argument_wrapper(
+        queue_name=f"{queue_prefix}.transcode.handler",
+        routing_key=[
+            f"{routing_key_prefix}.file_uploaded",
+            f"{routing_key_prefix}.regenerate_transcode",
+        ],
+    )
+)
+def dispatch_transcode(routing_key, body, message_id):
+    __handle_transcode_message(body)
+
+
+@get_rabbit().queue(
+    **__argument_wrapper(
         queue_name=f"{queue_prefix}.create.zip",
         routing_key=f"{routing_key_prefix}.create_zip",
     )
@@ -95,8 +148,7 @@ def create_zip(routing_key, body, message_id):
     **__argument_wrapper(
         queue_name=f"{queue_prefix}.transcode.add.width.height",
         routing_key=[
-            f"{routing_key_prefix}.file_uploaded",
-            f"{routing_key_prefix}.regenerate_transcode",
+            f"{routing_key_prefix}.transcode_add_width_height",
         ],
     )
 )
@@ -113,8 +165,7 @@ def transcode_add_width_height(routing_key, body, message_id):
     **__argument_wrapper(
         queue_name=f"{queue_prefix}.transcode.to.jpeg",
         routing_key=[
-            f"{routing_key_prefix}.file_uploaded",
-            f"{routing_key_prefix}.regenerate_transcode",
+            f"{routing_key_prefix}.transcode_to_jpeg",
         ],
     )
 )
@@ -126,8 +177,7 @@ def transcode_to_jpeg(routing_key, body, message_id):
     **__argument_wrapper(
         queue_name=f"{queue_prefix}.transcode.to.mp3",
         routing_key=[
-            f"{routing_key_prefix}.file_uploaded",
-            f"{routing_key_prefix}.regenerate_transcode",
+            f"{routing_key_prefix}.transcode_to_mp3",
         ],
     )
 )
@@ -139,8 +189,7 @@ def transcode_to_mp3(routing_key, body, message_id):
     **__argument_wrapper(
         queue_name=f"{queue_prefix}.transcode.to.mp4",
         routing_key=[
-            f"{routing_key_prefix}.file_uploaded",
-            f"{routing_key_prefix}.regenerate_transcode",
+            f"{routing_key_prefix}.transcode_to_mp4",
         ],
     )
 )
