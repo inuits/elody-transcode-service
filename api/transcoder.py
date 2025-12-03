@@ -510,9 +510,29 @@ class Transcoder(metaclass=Singleton):
             },
         }
         if info.audio:
+            AAC_SUPPORTED_SAMPLERATES = [
+                96000,
+                88200,
+                64000,
+                48000,
+                44100,
+                32000,
+                24000,
+                22050,
+                16000,
+                12000,
+                11025,
+                8000,
+                7350,
+            ]
+            source_rate = info.audio.audio_samplerate
+            closest_rate = min(
+                AAC_SUPPORTED_SAMPLERATES, key=lambda x: abs(x - source_rate)
+            )
+
             opts["audio"] = {
                 "codec": "aac",
-                "samplerate": info.audio.audio_samplerate,
+                "samplerate": closest_rate,
                 "channels": info.audio.audio_channels,
             }
         for _ in c.convert(read_location, write_location, opts, timeout=0):
