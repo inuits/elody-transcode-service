@@ -12,6 +12,7 @@ from elody.job import (
 from transcoder import Transcoder
 from rabbit import get_rabbit
 from os import error, getenv
+from converter.ffmpeg import FFMpegConvertError
 
 
 def __is_malformed_message(data, fields, mimetypes):
@@ -108,8 +109,14 @@ def __do_transcode(body, operation, mimetypes, error_message):
             get_rabbit=get_rabbit,
         )
         finish_job(job_id, get_rabbit=get_rabbit)
+    except FFMpegConvertError as ex:
+        error_message = (
+            f'{error_message.format(data["mediafile"]["filename"])} {ex.message}'
+        )
     except Exception as ex:
         error_message = f'{error_message.format(data["mediafile"]["filename"])} {ex}'
+
+    if error_message:
         fail_job(job_id, get_rabbit=get_rabbit, exception_message=error_message)
         app.logger.error(error_message)
 
