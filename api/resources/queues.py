@@ -72,6 +72,7 @@ def __handle_transcode_message(body):
 
 
 def __do_transcode(body, operation, mimetypes, error_message):
+    format_error_message = None
     data = body["data"]
     parent_job_id = data.get("parent_job_id")
     ignore_duplicates = bool(data.get("ignore_duplicates", False))
@@ -110,15 +111,17 @@ def __do_transcode(body, operation, mimetypes, error_message):
         )
         finish_job(job_id, get_rabbit=get_rabbit)
     except FFMpegConvertError as ex:
-        error_message = (
+        format_error_message = (
             f'{error_message.format(data["mediafile"]["filename"])} {ex.message}'
         )
     except Exception as ex:
-        error_message = f'{error_message.format(data["mediafile"]["filename"])} {ex}'
+        format_error_message = (
+            f'{error_message.format(data["mediafile"]["filename"])} {ex}'
+        )
 
-    if error_message:
-        fail_job(job_id, get_rabbit=get_rabbit, exception_message=error_message)
-        app.logger.error(error_message)
+    if format_error_message:
+        fail_job(job_id, get_rabbit=get_rabbit, exception_message=format_error_message)
+        app.logger.error(format_error_message)
 
 
 @get_rabbit().queue(
