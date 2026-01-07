@@ -475,6 +475,7 @@ class Transcoder(metaclass=Singleton):
                     )
 
     def transcode_to_jpeg(self, mediafile, read_location, write_location):
+        MAX_DIMENSION = 4000
         with Image.open(read_location) as src_img:
             exif = src_img.getexif()
             exif.pop(TiffImagePlugin.STRIPOFFSETS, None)
@@ -483,13 +484,15 @@ class Transcoder(metaclass=Singleton):
             if src_img.mode == "I;16":
                 src_img = src_img.point(lambda i: i * (1 / 255))
             ImageOps.exif_transpose(src_img, in_place=True)
+            if max(src_img.size) > MAX_DIMENSION:
+                src_img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
             with src_img.convert("RGB") as dst_img:
                 try:
-                    dst_img.save(write_location, quality=95, exif=exif)
+                    dst_img.save(write_location, quality=75, optimize=True, progressive=True, exif=exif)
                 except Exception as ex:
                     exif.clear()
                     self.__add_artist_and_copyright_to_exif(exif, artist, copyrights)
-                    dst_img.save(write_location, quality=95, exif=exif)
+                    dst_img.save(write_location, quality=75, optimize=True, progressive=True, exif=exif)
                     app.logger.info(f"First conversion failed with: {ex}")
 
     def transcode_to_mp3(self, read_location, write_location):
