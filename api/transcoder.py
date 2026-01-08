@@ -474,6 +474,28 @@ class Transcoder(metaclass=Singleton):
                         master_entity_id,
                     )
 
+    def transcode_resize(self, src_imag_size: tuple, max_size: int) -> bool | tuple:
+        """
+        If the transcode has a total pixels <= max_size**2 it is fine, and we should not resize
+        Otherwise, to get to max pixels we need to multiply total_pixels * max_pixels/total_pixels
+        This means we need to multiply each dimension of the image by the square_root
+
+        Let's say max = 200 -> max_pixels = 40000, and we have an image of 400*400 = 160000.
+        40000 / 160000 = 1/4
+        this means we have to multiply by sqrt(1/4) = 1/2 -> (200,200)
+        """
+        max_pixels = max_size**2
+        total_pixels = src_imag_size[0] * src_imag_size[1]
+        if total_pixels <= max_pixels:
+            return False
+        else:
+
+            scale_factor = sqrt(max_pixels / total_pixels)
+            return (
+                floor(src_imag_size[0] * scale_factor),
+                floor(src_imag_size[1] * scale_factor),
+            )
+
     def transcode_to_jpeg(self, mediafile, read_location, write_location):
         MAX_DIMENSION = 4000
         with Image.open(read_location) as src_img:
@@ -484,8 +506,9 @@ class Transcoder(metaclass=Singleton):
             if src_img.mode == "I;16":
                 src_img = src_img.point(lambda i: i * (1 / 255))
             ImageOps.exif_transpose(src_img, in_place=True)
-            if max(src_img.size) > MAX_DIMENSION:
-                src_img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
+
+            if resized_size := self.transcode_resize(src_img.size, MAX_DIMENSION):
+                src_img.thumbnail(resized_size, Image.Resampling.LANCZOS)
             with src_img.convert("RGB") as dst_img:
                 try:
                     dst_img.save(write_location, quality=75, optimize=True, progressive=True, exif=exif)
