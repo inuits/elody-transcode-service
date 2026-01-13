@@ -7,6 +7,7 @@ import tempfile
 
 from converter import Converter
 from datetime import datetime
+from math import floor, sqrt
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
@@ -489,7 +490,6 @@ class Transcoder(metaclass=Singleton):
         if total_pixels <= max_pixels:
             return False
         else:
-
             scale_factor = sqrt(max_pixels / total_pixels)
             return (
                 floor(src_imag_size[0] * scale_factor),
