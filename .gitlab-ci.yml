@@ -2,7 +2,7 @@
 include:
   - project: 'inuits/gitlab-ci/pipeline-templates'
     ref: 'v4.1.0'
-    file: 
+    file:
       - '/pipelines/customers/dams/deliver-multi-customer.yml'
       - '/jobs/docker/build-pip.yml'
 
@@ -20,3 +20,4 @@ customers:
         - coghent
         - digipolis
         - vliz
+        - imec
