@@ -28,14 +28,19 @@ def __is_malformed_message(data, fields, mimetypes):
 queue_prefix = getenv("QUEUE_PREFIX", "basic")
 global_queue_type = getenv("QUEUE_TYPE", "classic")
 routing_key_prefix = getenv("ROUTING_KEY_PREFIX", "dams")
+delivery_limit = getenv("DELIVERY_LIMIT", 4)
 
 
 def __argument_wrapper(*, queue_name, routing_key, queue_type=global_queue_type):
     arguments = {"routing_key": routing_key}
     if getenv("AMQP_MANAGER", "amqpstorm_flask") == "amqpstorm_flask":
         arguments["queue_name"] = queue_name
+        queue_arguments = {}
         if queue_type:
-            arguments["queue_arguments"] = {"x-queue-type": queue_type}
+            queue_arguments.update({"x-queue-type": queue_type})
+        if delivery_limit and queue_type == "quorum":
+            queue_arguments.update({"x-delivery-limit": delivery_limit})
+        arguments["queue_arguments"] = queue_arguments
     return arguments
 
 
@@ -125,6 +130,7 @@ def __do_transcode(body, operation, mimetypes, error_message):
         app.logger.error(format_error_message)
 
 
+# NOTE: Not changing this one currently, it should work pretty instantly (and should actually be reworked anyways)
 @get_rabbit().queue(
     **__argument_wrapper(
         queue_name=f"{queue_prefix}.transcode.handler",
@@ -142,17 +148,23 @@ def dispatch_transcode(routing_key, body, message_id):
     **__argument_wrapper(
         queue_name=f"{queue_prefix}.create.zip",
         routing_key=f"{routing_key_prefix}.create_zip",
-    )
+        queue_type="quorum",
+    ),
+    auto_ack=False,
+    full_message_object=True,
 )
-def create_zip(routing_key, body, message_id):
+def create_zip(message: Message):
+    body = message.json()
     data = body["data"]
     user_email = data.pop("user_email", None)
     try:
         zip_location = Transcoder().create_zip(
             data, data["auth_headers"], user_email=user_email
         )
+        message.ack()
     except Exception as ex:
         app.logger.error(f"Could not create ZIP-file {ex}")
+        message.nack()
 
 
 @get_rabbit().queue(
@@ -161,15 +173,20 @@ def create_zip(routing_key, body, message_id):
         routing_key=[
             f"{routing_key_prefix}.transcode_add_width_height",
         ],
-    )
+        queue_type="quorum",
+    ),
+    auto_ack=False,
+    full_message_object=True,
 )
-def transcode_add_width_height(routing_key, body, message_id):
+def transcode_add_width_height(message: Message):
+    body = message.json()
     __do_transcode(
         body,
         "width_height",
         ["image/", "video/"],
         "Adding width & height for {} failed with:",
     )
+    message.ack()
 
 
 @get_rabbit().queue(
@@ -197,10 +214,15 @@ def transcode_to_jpeg(message: Message):
         routing_key=[
             f"{routing_key_prefix}.transcode_to_mp3",
         ],
-    )
+        queue_type="quorum",
+    ),
+    auto_ack=False,
+    full_message_object=True,
 )
-def transcode_to_mp3(routing_key, body, message_id):
+def transcode_to_mp3(message: Message):
+    body = message.json()
     __do_transcode(body, "mp3", ["audio/"], "Transcoding {} to mp3 failed with:")
+    message.ack()
 
 
 @get_rabbit().queue(
@@ -209,7 +231,12 @@ def transcode_to_mp3(routing_key, body, message_id):
         routing_key=[
             f"{routing_key_prefix}.transcode_to_mp4",
         ],
-    )
+        queue_type="quorum",
+    ),
+    auto_ack=False,
+    full_message_object=True,
 )
-def transcode_to_mp4(routing_key, body, message_id):
+def transcode_to_mp4(message: Message):
+    body = message.json()
     __do_transcode(body, "mp4", ["video/"], "Transcoding {} to mp4 failed with:")
+    message.ack()
