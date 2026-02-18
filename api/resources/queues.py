@@ -1,4 +1,5 @@
 import app
+from amqpstorm import Message
 from policy_factory import get_user_context
 
 from elody.job import (
@@ -25,11 +26,11 @@ def __is_malformed_message(data, fields, mimetypes):
 
 
 queue_prefix = getenv("QUEUE_PREFIX", "basic")
-queue_type = getenv("QUEUE_TYPE", "classic")
+global_queue_type = getenv("QUEUE_TYPE", "classic")
 routing_key_prefix = getenv("ROUTING_KEY_PREFIX", "dams")
 
 
-def __argument_wrapper(*, queue_name, routing_key):
+def __argument_wrapper(*, queue_name, routing_key, queue_type=global_queue_type):
     arguments = {"routing_key": routing_key}
     if getenv("AMQP_MANAGER", "amqpstorm_flask") == "amqpstorm_flask":
         arguments["queue_name"] = queue_name
@@ -177,10 +178,17 @@ def transcode_add_width_height(routing_key, body, message_id):
         routing_key=[
             f"{routing_key_prefix}.transcode_to_jpeg",
         ],
-    )
+        queue_type="quorum",
+    ),
+    auto_ack=False,
+    full_message_object=True,
 )
-def transcode_to_jpeg(routing_key, body, message_id):
+def transcode_to_jpeg(message: Message):
+    # def transcode_to_jpeg(routing_key, body, message_id):
+
+    body = message.json()
     __do_transcode(body, "jpg", ["image/"], "Transcoding {} to jpeg failed with:")
+    message.ack()
 
 
 @get_rabbit().queue(
