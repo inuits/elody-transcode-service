@@ -70,7 +70,7 @@ def __handle_transcode_message(body):
             finish_job_with_warning(
                 job_id,
                 get_rabbit=get_rabbit,
-                info_message=f"Generating transcode for mimetypes {mimetype} currently not supported",
+                info_message=f"Generating transcode for mimetypes {mimetype} currently not supported.",
             )
         # TODO: Log this normally as well
     for routing_key in routing_keys:
