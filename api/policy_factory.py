@@ -5,8 +5,10 @@ from inuits_policy_based_auth.authentication.policies.token_based_policies.authl
 )
 from inuits_policy_based_auth.contexts.user_context import UserContext
 from inuits_policy_based_auth.exceptions import NoUserContextException
-from logging import Logger
 from os import getenv
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def init_policy_factory():
@@ -14,7 +16,7 @@ def init_policy_factory():
     _policy_factory.register_authentication_policy(
         "transcode-service",
         AuthlibFlaskOauth2Policy(
-            Logger(""),
+            logger,
             {"id": "email"},
             getenv("STATIC_ISSUER"),
             getenv("STATIC_PUBLIC_KEY"),
@@ -22,7 +24,8 @@ def init_policy_factory():
         ),
     )
     _policy_factory.register_authorization_policy(
-        "transcode-service", None  # pyright: ignore
+        "transcode-service",
+        None,  # pyright: ignore
     )
     _policy_factory.set_fallback_key_for_policy_mapping("transcode-service")
 
