@@ -59,7 +59,6 @@ def __handle_transcode_message(body):
     routing_keys = mimetypes_transcode_mapping.get(mimetype_start, [])
     if not routing_keys:
         if parent_job_id:
-
             job_id = init_job(
                 name=f"Transcode {data['mediafile']['original_filename']}",
                 job_type="Transcode Unsupported Format",
@@ -118,11 +117,11 @@ def __do_transcode(body, operation, mimetypes, error_message):
         finish_job(job_id, get_rabbit=get_rabbit)
     except FFMpegConvertError as ex:
         format_error_message = (
-            f'{error_message.format(data["mediafile"]["filename"])} {ex.message}'
+            f"{error_message.format(data['mediafile']['filename'])} {ex.message}"
         )
     except Exception as ex:
         format_error_message = (
-            f'{error_message.format(data["mediafile"]["filename"])} {ex}'
+            f"{error_message.format(data['mediafile']['filename'])} {ex}"
         )
 
     if format_error_message:
