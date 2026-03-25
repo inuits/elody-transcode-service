@@ -12,6 +12,7 @@ from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 from zipfile import ZipFile
+from zoneinfo import ZoneInfo
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -355,7 +356,9 @@ class Transcoder(metaclass=Singleton):
             )
         zip_location = None
         with tempfile.TemporaryDirectory() as temp_dir:
-            datetime_string = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            datetime_string = datetime.now(ZoneInfo("Europe/Brussels")).strftime(
+                "%Y-%m-%d_%H-%M-%S"
+            )
             download_entity_title = request_body.get("download_entity_title")
             zip_location = os.path.join(
                 self.zip_working_dir, f"{download_entity_title}-{datetime_string}.zip"
