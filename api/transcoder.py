@@ -28,7 +28,7 @@ class Singleton(type):
 class Transcoder(metaclass=Singleton):
     def __init__(self):
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
-        self.headers = {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
+        self.headers = {"Authorization": f"Bearer {os.getenv('STATIC_JWT')}"}
         self.storage_api_url = os.getenv("STORAGE_API_URL")
         self.zip_working_dir = os.getenv("ZIP_WORKING_DIR", "/app")
 
@@ -393,7 +393,7 @@ class Transcoder(metaclass=Singleton):
             read_location = os.path.join(temp_dir, mediafile["filename"])
             write_location = os.path.join(
                 temp_dir,
-                f'{os.path.splitext(mediafile["original_filename"])[0]}.{operation_name}',
+                f"{os.path.splitext(mediafile['original_filename'])[0]}.{operation_name}",
             )
             operation = {
                 "jpg": {
@@ -513,11 +513,23 @@ class Transcoder(metaclass=Singleton):
                 src_img.thumbnail(resized_size, Image.Resampling.LANCZOS)
             with src_img.convert("RGB") as dst_img:
                 try:
-                    dst_img.save(write_location, quality=75, optimize=True, progressive=True, exif=exif)
+                    dst_img.save(
+                        write_location,
+                        quality=75,
+                        optimize=True,
+                        progressive=True,
+                        exif=exif,
+                    )
                 except Exception as ex:
                     exif.clear()
                     self.__add_artist_and_copyright_to_exif(exif, artist, copyrights)
-                    dst_img.save(write_location, quality=75, optimize=True, progressive=True, exif=exif)
+                    dst_img.save(
+                        write_location,
+                        quality=75,
+                        optimize=True,
+                        progressive=True,
+                        exif=exif,
+                    )
                     app.logger.info(f"First conversion failed with: {ex}")
 
     def transcode_to_mp3(self, read_location, write_location):

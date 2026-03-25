@@ -20,7 +20,7 @@ class BaseTranscode(Resource):
     def _get_auth_headers(self):
         if tenant := request.headers.get("apikey"):
             return {"apikey": tenant}
-        return {"Authorization": f'Bearer {os.getenv("STATIC_JWT")}'}
+        return {"Authorization": f"Bearer {os.getenv('STATIC_JWT')}"}
 
     def _get_request_body(self):
         if request_body := request.get_json(silent=True):
@@ -31,7 +31,7 @@ class BaseTranscode(Resource):
         content = self._get_request_body()
         self.__is_malformed_message(content, ["mediafile", "mimetype"], mimetypes)
         if operation == "mp3" and content["mimetype"] == "audio/mpeg":
-            abort(400, message=f'{content["mediafile"]["filename"]} is already an mp3')
+            abort(400, message=f"{content['mediafile']['filename']} is already an mp3")
         user_email = get_user_context().id
         try:
             Transcoder().transcode(
