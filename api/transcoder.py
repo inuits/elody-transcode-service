@@ -39,10 +39,17 @@ class Transcoder(metaclass=Singleton):
             exif[ExifTags.Base.Copyright] = copyrights
 
     def __add_entities_to_zip(
-        self, zipfile, working_dir, entity_ids, headers=None, user_email=None
+        self,
+        zipfile,
+        working_dir,
+        entity_ids,
+        headers=None,
+        user_email=None,
     ):
         mediafile_ids = list()
         for entity_id in entity_ids:
+            entity = self.__get_entity(entity_id)
+            entity_identifier = self.__get_entity_identifier(entity)
             entity_mediafiles = self.__get_entity_mediafiles(entity_id, headers)
             for mediafile in entity_mediafiles.get("results", list()):
                 mediafile_ids.append(self.__get_raw_id(mediafile))
@@ -51,7 +58,7 @@ class Transcoder(metaclass=Singleton):
                     working_dir,
                     mediafile,
                     headers,
-                    entity_id,
+                    destination_path=entity_identifier,
                     user_email=user_email,
                 )
         return mediafile_ids
@@ -118,6 +125,21 @@ class Transcoder(metaclass=Singleton):
             )
             return
         return req.text
+
+    def __get_entity(self, entity_id, headers=None):
+        entity_url = f"{self.collection_api_url}/entities/{entity_id}"
+        req = requests.get(
+            entity_url,
+            headers=self.__get_headers(headers),
+        )
+        if req.status_code != 200:
+            raise Exception(
+                f"Could not get entity  from {entity_url}\n" + req.text.strip()
+            )
+        return req.json()
+
+    def __get_entity_identifier(self, entity):
+        return entity.get("id", None) or entity["_id"]
 
     def __get_entity_mediafiles(self, entity_id, headers=None):
         entity_mediafiles_url = (
