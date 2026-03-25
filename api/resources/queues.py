@@ -157,9 +157,7 @@ def create_zip(message: Message):
     data = body["data"]
     user_email = data.pop("user_email", None)
     try:
-        zip_location = Transcoder().create_zip(
-            data, data["auth_headers"], user_email=user_email
-        )
+        Transcoder().create_zip(data, data["auth_headers"], user_email=user_email)
         message.ack()
     except Exception as ex:
         app.logger.error(f"Could not create ZIP-file {ex}")

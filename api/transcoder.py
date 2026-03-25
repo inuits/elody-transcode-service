@@ -294,6 +294,9 @@ class Transcoder(metaclass=Singleton):
     def __upload_zip_to_download_entity(
         self, download_entity_id, zip_location, headers=None, user_email=None
     ):
+        """Add zip to download entity and upload to S3
+        Also deletes the zip from the filesystem
+        """
         with open(zip_location, "rb") as zip:
             zip_upload_link = self.__get_zip_upload_link(
                 download_entity_id,
@@ -376,7 +379,6 @@ class Transcoder(metaclass=Singleton):
                 download_entity_id, zip_location, headers, user_email=user_email
             )
             self.__set_download_entity_progress(download_entity_id, "Finished", headers)
-        return zip_location
 
     def transcode(
         self,
