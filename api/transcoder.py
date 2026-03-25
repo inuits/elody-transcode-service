@@ -1,18 +1,18 @@
-import app
 import os
-import pydub
-import requests
 import shutil
 import tempfile
-
-from converter import Converter
 from datetime import datetime
 from math import floor, sqrt
-from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 from zipfile import ZipFile
 from zoneinfo import ZoneInfo
+
+import app
+import pydub
+import requests
+from converter import Converter
+from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -22,7 +22,7 @@ class Singleton(type):
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+            cls._instances[cls] = super().__call__(*args, **kwargs)
         return cls._instances[cls]
 
 
@@ -65,20 +65,38 @@ class Transcoder(metaclass=Singleton):
         return mediafile_ids
 
     def __add_mediafiles_to_zip(
-        self, zipfile, working_dir, mediafile_ids, headers=None, user_email=None
+        self,
+        zipfile,
+        working_dir,
+        mediafile_ids,
+        headers=None,
+        user_email=None,
     ):
         for mediafile_id in mediafile_ids:
             mediafile = self.__get_mediafile(mediafile_id, headers)
             self.__add_single_file_to_zip(
-                zipfile, working_dir, mediafile, headers, user_email=user_email
+                zipfile,
+                working_dir,
+                mediafile,
+                headers,
+                user_email=user_email,
             )
         return mediafile_ids
 
     def __add_objects_csv_to_zip(
-        self, zipfile, working_dir, object_ids, object_type, fields=None, headers=None
+        self,
+        zipfile,
+        working_dir,
+        object_ids,
+        object_type,
+        fields=None,
+        headers=None,
     ):
         if csv_for_objects := self.__get_csv_for_objects(
-            object_ids, object_type, fields, headers
+            object_ids,
+            object_type,
+            fields,
+            headers,
         ):
             objects_csv_path = os.path.join(working_dir, f"{object_type}.csv")
             with open(objects_csv_path, "w") as objects_csv:
@@ -99,7 +117,9 @@ class Transcoder(metaclass=Singleton):
         with open(read_location, "wb") as input_file:
             self.__get_file(
                 self.__get_mediafile_download_link(
-                    mediafile, headers, user_email=user_email
+                    mediafile,
+                    headers,
+                    user_email=user_email,
                 ),
                 input_file,
                 headers,
@@ -107,10 +127,14 @@ class Transcoder(metaclass=Singleton):
         zipfile.write(read_location, os.path.join(destination_path, filename))
 
     def __get_csv_for_objects(
-        self, object_ids, object_type="entities", fields=None, headers=None
+        self,
+        object_ids,
+        object_type="entities",
+        fields=None,
+        headers=None,
     ):
         if not object_ids:
-            return
+            return None
         req = requests.get(
             f"{self.collection_api_url}/{object_type}",
             params={
@@ -122,9 +146,9 @@ class Transcoder(metaclass=Singleton):
         )
         if req.status_code != 200:
             app.logger.info(
-                f"Could not fetch CSV for {object_type}, status code: {req.status_code}"
+                f"Could not fetch CSV for {object_type}, status code: {req.status_code}",
             )
-            return
+            return None
         return req.text
 
     def __get_entity(self, entity_id, headers=None):
@@ -135,7 +159,7 @@ class Transcoder(metaclass=Singleton):
         )
         if req.status_code != 200:
             raise Exception(
-                f"Could not get entity  from {entity_url}\n" + req.text.strip()
+                f"Could not get entity  from {entity_url}\n" + req.text.strip(),
             )
         return req.json()
 
@@ -153,7 +177,7 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 200:
             raise Exception(
                 f"Could not get entity mediafiles from {entity_mediafiles_url}\n"
-                + req.text.strip()
+                + req.text.strip(),
             )
         return req.json()
 
@@ -199,7 +223,7 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 200:
             raise Exception(
                 f"Could not get mediafile details from {mediafiles_url}\n"
-                + req.text.strip()
+                + req.text.strip(),
             )
         return req.json()
 
@@ -213,7 +237,11 @@ class Transcoder(metaclass=Singleton):
         return item.get("_key", item["_id"])
 
     def __get_zip_upload_link(
-        self, entity_id, zip_filename, headers=None, user_email=None
+        self,
+        entity_id,
+        zip_filename,
+        headers=None,
+        user_email=None,
     ):
         mediafile = {
             "filename": zip_filename,
@@ -236,13 +264,16 @@ class Transcoder(metaclass=Singleton):
             raise Exception(req.text.strip())
 
     def __set_download_entity_progress(
-        self, download_entity_id, progress, headers=None
+        self,
+        download_entity_id,
+        progress,
+        headers=None,
     ):
         payload = [
             {
                 "key": "status",
                 "value": progress,
-            }
+            },
         ]
         req = requests.patch(
             f"{self.collection_api_url}/entities/{download_entity_id}/metadata",
@@ -251,11 +282,15 @@ class Transcoder(metaclass=Singleton):
         )
         if req.status_code != 200:
             app.logger.info(
-                f"Failed report progress on download entity, status code: {req.status_code}"
+                f"Failed report progress on download entity, status code: {req.status_code}",
             )
 
     def __upload_mediafile(
-        self, file_name, file_bytes, headers=None, master_entity_id=None
+        self,
+        file_name,
+        file_bytes,
+        headers=None,
+        master_entity_id=None,
     ):
         req = requests.post(
             f"{self.collection_api_url}/mediafiles",
@@ -315,7 +350,11 @@ class Transcoder(metaclass=Singleton):
             raise Exception(req.text.strip())
 
     def __upload_zip_to_download_entity(
-        self, download_entity_id, zip_location, headers=None, user_email=None
+        self,
+        download_entity_id,
+        zip_location,
+        headers=None,
+        user_email=None,
     ):
         """Add zip to download entity and upload to S3
         Also deletes the zip from the filesystem
@@ -330,7 +369,7 @@ class Transcoder(metaclass=Singleton):
             req = requests.post(zip_upload_link, files={"file": zip})
             if req.status_code != 201:
                 app.logger.info(
-                    f"Failed to upload zip to download entity, status code: {req.status_code}"
+                    f"Failed to upload zip to download entity, status code: {req.status_code}",
                 )
                 return
             os.remove(zip_location)
@@ -352,16 +391,19 @@ class Transcoder(metaclass=Singleton):
     def create_zip(self, request_body, headers=None, user_email=None):
         if download_entity_id := request_body.get("download_entity_id"):
             self.__set_download_entity_progress(
-                download_entity_id, "In Progress", headers
+                download_entity_id,
+                "In Progress",
+                headers,
             )
         zip_location = None
         with tempfile.TemporaryDirectory() as temp_dir:
             datetime_string = datetime.now(ZoneInfo("Europe/Brussels")).strftime(
-                "%Y-%m-%d_%H-%M-%S"
+                "%Y-%m-%d_%H-%M-%S",
             )
             download_entity_title = request_body.get("download_entity_title")
             zip_location = os.path.join(
-                self.zip_working_dir, f"{download_entity_title}-{datetime_string}.zip"
+                self.zip_working_dir,
+                f"{download_entity_title}-{datetime_string}.zip",
             )
             with ZipFile(zip_location, "w") as zip:
                 mediafiles_for_entity = self.__add_entities_to_zip(
@@ -383,8 +425,8 @@ class Transcoder(metaclass=Singleton):
                     "mediafiles": list(
                         set(
                             request_body.get("mediafiles", list())
-                            + mediafiles_for_entity
-                        )
+                            + mediafiles_for_entity,
+                        ),
                     ),
                 }
                 for object_type, csv_fields_definition_field in {
@@ -401,7 +443,10 @@ class Transcoder(metaclass=Singleton):
                     )
         if download_entity_id:
             self.__upload_zip_to_download_entity(
-                download_entity_id, zip_location, headers, user_email=user_email
+                download_entity_id,
+                zip_location,
+                headers,
+                user_email=user_email,
             )
             self.__set_download_entity_progress(download_entity_id, "Finished", headers)
 
@@ -444,7 +489,9 @@ class Transcoder(metaclass=Singleton):
             with open(read_location, "wb") as input_file:
                 self.__get_file(
                     self.__get_mediafile_download_link(
-                        mediafile, headers, user_email=user_email
+                        mediafile,
+                        headers,
+                        user_email=user_email,
                     ),
                     input_file,
                     headers,
@@ -487,7 +534,9 @@ class Transcoder(metaclass=Singleton):
                 with open(read_location, "wb") as input_file:
                     self.__get_file(
                         self.__get_mediafile_download_link(
-                            mediafile, headers, user_email=user_email
+                            mediafile,
+                            headers,
+                            user_email=user_email,
                         ),
                         input_file,
                         headers,
@@ -516,12 +565,11 @@ class Transcoder(metaclass=Singleton):
         total_pixels = src_imag_size[0] * src_imag_size[1]
         if total_pixels <= max_pixels:
             return False
-        else:
-            scale_factor = sqrt(max_pixels / total_pixels)
-            return (
-                floor(src_imag_size[0] * scale_factor),
-                floor(src_imag_size[1] * scale_factor),
-            )
+        scale_factor = sqrt(max_pixels / total_pixels)
+        return (
+            floor(src_imag_size[0] * scale_factor),
+            floor(src_imag_size[1] * scale_factor),
+        )
 
     def transcode_to_jpeg(self, mediafile, read_location, write_location):
         MAX_DIMENSION = 4000
@@ -592,7 +640,8 @@ class Transcoder(metaclass=Singleton):
             ]
             source_rate = info.audio.audio_samplerate
             closest_rate = min(
-                AAC_SUPPORTED_SAMPLERATES, key=lambda x: abs(x - source_rate)
+                AAC_SUPPORTED_SAMPLERATES,
+                key=lambda x: abs(x - source_rate),
             )
 
             opts["audio"] = {

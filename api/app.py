@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import secrets
@@ -8,8 +7,9 @@ from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
 from policy_factory import init_policy_factory
+
 # from rabbitmq_pika_flask import RabbitMQ
-from rabbit import init_rabbit, get_rabbit
+from rabbit import get_rabbit, init_rabbit
 
 if os.getenv("SENTRY_ENABLED", False) in ["True", "true", True]:
     import sentry_sdk
@@ -65,7 +65,6 @@ from resources.transcode import (
     WidthHeightTranscode,
     ZipTranscode,
 )
-import resources.queues
 
 api.add_resource(AsyncAPISpec, "/spec/dams-transcode-service-events.html")
 api.add_resource(OpenAPISpec, "/spec/dams-transcode-service.json")

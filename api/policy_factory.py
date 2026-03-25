@@ -1,3 +1,6 @@
+import logging
+from os import getenv
+
 from flask import g
 from inuits_policy_based_auth import PolicyFactory, RequestContext
 from inuits_policy_based_auth.authentication.policies.token_based_policies.authlib_flask_oauth2_policy import (
@@ -5,8 +8,6 @@ from inuits_policy_based_auth.authentication.policies.token_based_policies.authl
 )
 from inuits_policy_based_auth.contexts.user_context import UserContext
 from inuits_policy_based_auth.exceptions import NoUserContextException
-from os import getenv
-import logging
 
 logger = logging.getLogger(__name__)
 

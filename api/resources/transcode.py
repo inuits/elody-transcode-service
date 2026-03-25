@@ -3,11 +3,11 @@ import os
 from cloudevents.conversion import to_dict
 from cloudevents.http import CloudEvent
 from flask import request
-from flask_restful import abort, Resource
+from flask_restful import Resource, abort
 from inuits_policy_based_auth import RequestContext
 from policy_factory import authenticate, get_user_context
-from transcoder import Transcoder
 from rabbit import get_rabbit
+from transcoder import Transcoder
 
 
 class BaseTranscode(Resource):
@@ -67,7 +67,9 @@ class WidthHeightTranscode(BaseTranscode):
     @authenticate(RequestContext(request))
     def post(self):
         return super().post(
-            "width_height", ["image/", "video/"], "Successfully added {} width & height"
+            "width_height",
+            ["image/", "video/"],
+            "Successfully added {} width & height",
         )
 
 

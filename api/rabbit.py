@@ -1,11 +1,11 @@
-from elody.loader import load_queues
-from elody.util import CustomJSONEncoder, custom_json_dumps
+import logging
 from importlib import import_module
 from json import loads
 from os import getenv
 from typing import Any
-import logging
 
+from elody.loader import load_queues
+from elody.util import CustomJSONEncoder, custom_json_dumps
 
 _rabbit = None
 
@@ -47,11 +47,15 @@ def init_rabbit(app):
             auto_delete=auto_delete_exchange,
             durable=durable_exchange,
             passive=passive_exchange,
-        )
+        ),
     )
     if amqp_module.__name__ == "amqpstorm_flask":
         _rabbit.init_app(
-            app, "basic", loads, custom_json_dumps, json_encoder=CustomJSONEncoder
+            app,
+            "basic",
+            loads,
+            custom_json_dumps,
+            json_encoder=CustomJSONEncoder,
         )
     else:
         _rabbit.init_app(app, "basic", loads, custom_json_dumps)

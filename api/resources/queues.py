@@ -1,19 +1,18 @@
+from os import getenv
+
 import app
 from amqpstorm import Message
-from policy_factory import get_user_context
-
+from converter.ffmpeg import FFMpegConvertError
 from elody.job import (
+    add_document_to_job,
     fail_job,
     finish_job,
+    finish_job_with_warning,
     init_job,
     start_job,
-    add_document_to_job,
-    finish_job_with_warning,
 )
-from transcoder import Transcoder
 from rabbit import get_rabbit
-from os import error, getenv
-from converter.ffmpeg import FFMpegConvertError
+from transcoder import Transcoder
 
 
 def __is_malformed_message(data, fields, mimetypes):
@@ -54,7 +53,7 @@ def __handle_transcode_message(body):
     data = body["data"]
     parent_job_id = data.get("parent_job_id")
     mimetype: str = data["mediafile"]["mimetype"]
-    mimetype_start = mimetype.split("/")[0]
+    mimetype_start = mimetype.split("/", maxsplit=1)[0]
 
     routing_keys = mimetypes_transcode_mapping.get(mimetype_start, [])
     if not routing_keys:
@@ -137,7 +136,7 @@ def __do_transcode(body, operation, mimetypes, error_message):
             f"{routing_key_prefix}.file_uploaded",
             f"{routing_key_prefix}.regenerate_transcode",
         ],
-    )
+    ),
 )
 def dispatch_transcode(routing_key, body, message_id):
     __handle_transcode_message(body)
