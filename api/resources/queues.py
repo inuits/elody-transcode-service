@@ -129,17 +129,17 @@ def __do_transcode(body, operation, mimetypes, error_message):
 
 
 # NOTE: Not changing this one currently, it should work pretty instantly (and should actually be reworked anyways)
-@get_rabbit().queue(
-    **__argument_wrapper(
-        queue_name=f"{queue_prefix}.transcode.handler",
-        routing_key=[
-            f"{routing_key_prefix}.file_uploaded",
-            f"{routing_key_prefix}.regenerate_transcode",
-        ],
-    ),
-)
-def dispatch_transcode(routing_key, body, message_id):
-    __handle_transcode_message(body)
+# @get_rabbit().queue(
+#     **__argument_wrapper(
+#         queue_name=f"{queue_prefix}.transcode.handler",
+#         routing_key=[
+#             f"{routing_key_prefix}.file_uploaded",
+#             f"{routing_key_prefix}.regenerate_transcode",
+#         ],
+#     ),
+# )
+# def dispatch_transcode(routing_key, body, message_id):
+#     __handle_transcode_message(body)
 
 
 @get_rabbit().queue(
@@ -168,6 +168,8 @@ def create_zip(message: Message):
         queue_name=f"{queue_prefix}.transcode.add.width.height",
         routing_key=[
             f"{routing_key_prefix}.transcode_add_width_height",
+            f"{routing_key_prefix}.file_uploaded.image.*",
+            f"{routing_key_prefix}.file_uploaded.video.*",
         ],
         queue_type="quorum",
     ),
@@ -190,6 +192,7 @@ def transcode_add_width_height(message: Message):
         queue_name=f"{queue_prefix}.transcode.to.jpeg",
         routing_key=[
             f"{routing_key_prefix}.transcode_to_jpeg",
+            f"{routing_key_prefix}.file_uploaded.image.*",
         ],
         queue_type="quorum",
     ),
@@ -209,6 +212,7 @@ def transcode_to_jpeg(message: Message):
         queue_name=f"{queue_prefix}.transcode.to.mp3",
         routing_key=[
             f"{routing_key_prefix}.transcode_to_mp3",
+            f"{routing_key_prefix}.file_uploaded.audio.*",
         ],
         queue_type="quorum",
     ),
@@ -226,6 +230,7 @@ def transcode_to_mp3(message: Message):
         queue_name=f"{queue_prefix}.transcode.to.mp4",
         routing_key=[
             f"{routing_key_prefix}.transcode_to_mp4",
+            f"{routing_key_prefix}.file_uploaded.video.*",
         ],
         queue_type="quorum",
     ),
