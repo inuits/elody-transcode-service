@@ -9,6 +9,8 @@ from policy_factory import authenticate, get_user_context
 from rabbit import get_rabbit
 from transcoder import Transcoder
 
+ROUTING_KEY_PREFIX = os.getenv("ROUTING_KEY_PREFIX", "dams")
+
 
 class BaseTranscode(Resource):
     def __is_malformed_message(self, data, fields, mimetypes):
@@ -103,7 +105,7 @@ class ZipTranscode(BaseTranscode):
         data["auth_headers"] = self._get_auth_headers()
         data["user_email"] = get_user_context().id
         event = to_dict(CloudEvent(attributes, data))
-        get_rabbit().send(event, routing_key="dams.create_zip")
+        get_rabbit().send(event, routing_key=f"{ROUTING_KEY_PREFIX}.create_zip")
         return (
             "ZIP creation job place on the queue",
             201,
