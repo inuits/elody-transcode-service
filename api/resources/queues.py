@@ -7,7 +7,6 @@ from elody.job import (
     add_document_to_job,
     fail_job,
     finish_job,
-    finish_job_with_warning,
     init_job,
     start_job,
 )
@@ -43,44 +42,22 @@ def __argument_wrapper(*, queue_name, routing_key, queue_type=global_queue_type)
     return arguments
 
 
-def __handle_transcode_message(body):
-    mimetypes_transcode_mapping = {
-        "image": ["transcode_add_width_height", "transcode_to_jpeg"],
-        "audio": ["transcode_to_mp3"],
-        "video": ["transcode_add_width_height", "transcode_to_mp4"],
-    }
-
-    data = body["data"]
-    parent_job_id = data.get("parent_job_id")
-    mimetype: str = data["mediafile"]["mimetype"]
-    mimetype_start = mimetype.split("/", maxsplit=1)[0]
-
-    routing_keys = mimetypes_transcode_mapping.get(mimetype_start, [])
-    if not routing_keys:
-        if parent_job_id:
-            job_id = init_job(
-                name=f"Transcode {data['mediafile']['original_filename']}",
-                job_type="Transcode Unsupported Format",
-                get_rabbit=get_rabbit,
-                user_email=data.get("user_email", "developers@inuits.eu"),
-                parent_id=parent_job_id,
-            )
-            finish_job_with_warning(
-                job_id,
-                get_rabbit=get_rabbit,
-                info_message=f"Generating transcode for mimetypes {mimetype} currently not supported.",
-            )
-        # TODO: Log this normally as well
-    for routing_key in routing_keys:
-        get_rabbit().send(body, routing_key=f"{routing_key_prefix}.{routing_key}")
-
-
-def __do_transcode(body, operation, mimetypes, error_message):
+def __do_transcode(
+    body,
+    operation,
+    mimetypes,
+    error_message,
+):
     format_error_message = None
     data = body["data"]
     parent_job_id = data.get("parent_job_id")
     ignore_duplicates = bool(data.get("ignore_duplicates", False))
-    if __is_malformed_message(data, ["mediafile", "mimetype"], mimetypes):
+    if __is_malformed_message(
+        data,
+        ["mediafile", "mimetype"],
+        mimetypes,  # Technically this check on mimetypes is no longer needed,
+        # since we only bind to topics of the correct mimetype now
+    ):
         return
 
     job_id = init_job(
@@ -126,20 +103,6 @@ def __do_transcode(body, operation, mimetypes, error_message):
     if format_error_message:
         fail_job(job_id, get_rabbit=get_rabbit, exception_message=format_error_message)
         app.logger.error(format_error_message)
-
-
-# NOTE: Not changing this one currently, it should work pretty instantly (and should actually be reworked anyways)
-# @get_rabbit().queue(
-#     **__argument_wrapper(
-#         queue_name=f"{queue_prefix}.transcode.handler",
-#         routing_key=[
-#             f"{routing_key_prefix}.file_uploaded",
-#             f"{routing_key_prefix}.regenerate_transcode",
-#         ],
-#     ),
-# )
-# def dispatch_transcode(routing_key, body, message_id):
-#     __handle_transcode_message(body)
 
 
 @get_rabbit().queue(
