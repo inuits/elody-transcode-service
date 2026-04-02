@@ -214,6 +214,7 @@ class Transcoder(metaclass=Singleton):
                 stop = True
             response["results"].extend(partial_response["results"])
             response["count"] += partial_response["count"]
+            params["skip"] += 100
         return response
 
     def __get_exif_for_mediafile(self, mediafile):
