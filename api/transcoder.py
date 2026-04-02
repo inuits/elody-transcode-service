@@ -125,6 +125,7 @@ class Transcoder(metaclass=Singleton):
                 headers,
             )
         zipfile.write(read_location, os.path.join(destination_path, filename))
+        os.remove(read_location)
 
     def __get_csv_for_objects(
         self,
