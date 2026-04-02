@@ -140,7 +140,8 @@ class Transcoder(metaclass=Singleton):
 
         if self.csv_exporter_url:
             req = requests.post(
-                f"{self.csv_exporter_url}/{object_type}?order_by=title",
+                f"{self.csv_exporter_url}/{object_type}",
+                params={"order_by": "title", "limit": len(object_ids)},
                 json={
                     "ids": object_ids,
                     "fields": fields,
