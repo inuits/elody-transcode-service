@@ -29,6 +29,7 @@ class Singleton(type):
 class Transcoder(metaclass=Singleton):
     def __init__(self):
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
+        self.csv_exporter_url = os.getenv("CSV_EXPORTER_URL", None)
         self.headers = {"Authorization": f"Bearer {os.getenv('STATIC_JWT')}"}
         self.storage_api_url = os.getenv("STORAGE_API_URL")
         self.zip_working_dir = os.getenv("ZIP_WORKING_DIR", "/app")
@@ -136,18 +137,35 @@ class Transcoder(metaclass=Singleton):
     ):
         if not object_ids:
             return None
-        req = requests.get(
-            f"{self.collection_api_url}/{object_type}",
-            params={
-                "ids": ",".join(object_ids),
-                "field[]": fields,
-                "exclude_non_editable_fields": True,
-            },
-            headers=self.__get_headers({**{"Accept": "text/csv"}, **headers}),
-        )
+
+        if self.csv_exporter_url:
+            req = requests.post(
+                f"{self.csv_exporter_url}/{object_type}?order_by=title",
+                json={
+                    "ids": object_ids,
+                    "fields": fields,
+                    "exclude_non_editable_fields": True,
+                },
+                headers=self.__get_headers(
+                    {
+                        **{"Accept": "text/csv", "Content-Type": "application/json"},
+                        **headers,
+                    }
+                ),
+            )
+        else:
+            req = requests.get(
+                f"{self.collection_api_url}/{object_type}",
+                params={
+                    "ids": ",".join(object_ids),
+                    "field[]": fields,
+                    "exclude_non_editable_fields": True,
+                },
+                headers=self.__get_headers({**{"Accept": "text/csv"}, **headers}),
+            )
         if req.status_code != 200:
             app.logger.info(
-                f"Could not fetch CSV for {object_type}, status code: {req.status_code}",
+                f"Could not fetch CSV for {object_type}, status code: {req.status_code}, error: {req.text}",
             )
             return None
         return req.text
@@ -171,16 +189,26 @@ class Transcoder(metaclass=Singleton):
         entity_mediafiles_url = (
             f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
         )
-        req = requests.get(
-            entity_mediafiles_url,
-            headers=self.__get_headers(headers),
-        )
-        if req.status_code != 200:
-            raise Exception(
-                f"Could not get entity mediafiles from {entity_mediafiles_url}\n"
-                + req.text.strip(),
+        params = {"skip": 0, "limit": 100}
+        stop = False
+        response = {"count": 0, "results": []}
+        while not stop:
+            req = requests.get(
+                entity_mediafiles_url,
+                params=params,
+                headers=self.__get_headers(headers),
             )
-        return req.json()
+            if req.status_code != 200:
+                raise Exception(
+                    f"Could not get entity mediafiles from {entity_mediafiles_url}\n"
+                    + req.text.strip(),
+                )
+            partial_response = req.json()
+            if not partial_response.get("next"):
+                stop = True
+            response["results"].extend(partial_response["results"])
+            response["count"] += partial_response["count"]
+        return response
 
     def __get_exif_for_mediafile(self, mediafile):
         artist, copyrights = list(), list()
