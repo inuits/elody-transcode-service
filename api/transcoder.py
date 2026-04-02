@@ -403,7 +403,7 @@ class Transcoder(metaclass=Singleton):
             )
             download_entity_title = request_body.get("download_entity_title")
             zip_location = os.path.join(
-                self.zip_working_dir,
+                temp_dir,
                 f"{download_entity_title}-{datetime_string}.zip",
             )
             with ZipFile(zip_location, "w") as zip:
@@ -442,14 +442,16 @@ class Transcoder(metaclass=Singleton):
                         request_body.get(csv_fields_definition_field, list()),
                         headers,
                     )
-        if download_entity_id:
-            self.__upload_zip_to_download_entity(
-                download_entity_id,
-                zip_location,
-                headers,
-                user_email=user_email,
-            )
-            self.__set_download_entity_progress(download_entity_id, "Finished", headers)
+            if download_entity_id:
+                self.__upload_zip_to_download_entity(
+                    download_entity_id,
+                    zip_location,
+                    headers,
+                    user_email=user_email,
+                )
+                self.__set_download_entity_progress(
+                    download_entity_id, "Finished", headers
+                )
 
     def transcode(
         self,
