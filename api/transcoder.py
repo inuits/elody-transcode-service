@@ -29,6 +29,11 @@ class Singleton(type):
 class Transcoder(metaclass=Singleton):
     def __init__(self):
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
+        self.csv_exporter_enabled = os.getenv("CSV_EXPORTER_ENABLED", False) in {
+            "true",
+            "True",
+            1,
+        }
         self.csv_exporter_url = os.getenv("CSV_EXPORTER_URL", None)
         self.headers = {"Authorization": f"Bearer {os.getenv('STATIC_JWT')}"}
         self.storage_api_url = os.getenv("STORAGE_API_URL")
@@ -138,7 +143,7 @@ class Transcoder(metaclass=Singleton):
         if not object_ids:
             return None
 
-        if self.csv_exporter_url:
+        if self.csv_exporter_enabled:
             req = requests.post(
                 f"{self.csv_exporter_url}/{object_type}",
                 params={"order_by": "title", "limit": len(object_ids)},
