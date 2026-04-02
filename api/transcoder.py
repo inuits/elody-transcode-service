@@ -402,7 +402,7 @@ class Transcoder(metaclass=Singleton):
                 headers,
                 user_email=user_email,
             )
-            req = requests.post(zip_upload_link, files={"file": zip})
+            req = requests.post(zip_upload_link, data=zip)
             if req.status_code != 201:
                 app.logger.info(
                     f"Failed to upload zip to download entity, status code: {req.status_code}",
