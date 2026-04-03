@@ -15,6 +15,8 @@ if [ ! -z "$TRUSTED_CA_BUNDLE" ]; then
 fi
 
 if [ "$APP_ENV" = "dev" ]; then
+  echo "Clearing /tmp"
+	rm -rf /tmp/* 2>/dev/null || true
   echo "Starting development server..."
   export FLASK_DEBUG='1'
   cd ~/api
