@@ -42,6 +42,17 @@ def __argument_wrapper(*, queue_name, routing_key, queue_type=global_queue_type)
     return arguments
 
 
+def __filesize_warning(filesize: str) -> bool:
+    units = {"b": 1, "kb": 10**3, "mb": 10**6, "gb": 10**9, "tb": 10**12}
+    number, unit = [filesize_part.strip() for filesize_part in filesize.lower().split()]
+    size_bytes = float(number) * units[unit]
+
+    if size_bytes > 1 * units["gb"]:
+        return True
+
+    return False
+
+
 def __do_transcode(
     body,
     operation,
@@ -68,6 +79,14 @@ def __do_transcode(
         parent_id=parent_job_id,
     )
     try:
+        filesize = data["mediafile"]["filesize"]
+        app.logger.info(
+            f"Starting transcode for {data['mediafile']['original_filename']}, size: {filesize}"
+        )
+        if __filesize_warning(filesize):
+            app.logger.warning(
+                f"Filesize {filesize} large for mediafile {data['mediafile']['_id']}, may cause OOM"
+            )
         start_job(job_id, get_rabbit=get_rabbit)
         if "headers" in data:
             Transcoder().transcode(
