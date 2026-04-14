@@ -13,6 +13,7 @@ import pydub
 import requests
 from converter import Converter
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
+import re
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -188,8 +189,23 @@ class Transcoder(metaclass=Singleton):
             )
         return req.json()
 
+    # TODO: We should move this to the elody-sdk
+    @staticmethod
+    def __parse_filename_unfriendly_string(
+        input: str,
+        *,
+        replace_char="_",
+    ) -> str:
+        if input is None:
+            return None
+
+        return re.sub(r'[<>:"/\\|?*]|^\.|\.$', replace_char, input)
+
     def __get_entity_identifier(self, entity):
-        return entity.get("id", None) or entity["_id"]
+        return (
+            self.__parse_filename_unfriendly_string(entity.get("id", None))
+            or entity["_id"]
+        )
 
     def __get_entity_mediafiles(self, entity_id, headers=None):
         entity_mediafiles_url = (
