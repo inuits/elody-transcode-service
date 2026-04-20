@@ -367,7 +367,7 @@ class Transcoder(metaclass=Singleton):
                 raise Exception(req.text.strip())
         req = requests.post(
             upload_link,
-            files={"file": (file_name, file_bytes)},
+            data=file_bytes,
             headers=self.__get_headers(headers),
         )
         if req.status_code != 201:
@@ -395,7 +395,7 @@ class Transcoder(metaclass=Singleton):
             storage_url += f"&parent_job_id={parent_job_id}"
         req = requests.post(
             storage_url,
-            files={"file": (file_name, file_bytes)},
+            data=file_bytes,
             headers=self.__get_headers(headers),
         )
         if req.status_code != 201:
