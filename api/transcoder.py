@@ -36,7 +36,10 @@ class Transcoder(metaclass=Singleton):
             1,
         }
         self.csv_exporter_url = os.getenv("CSV_EXPORTER_URL", None)
-        self.headers = {"Authorization": f"Bearer {os.getenv('STATIC_JWT')}"}
+        self.headers = {
+            "Authorization": f"Bearer {os.getenv('STATIC_JWT')}",
+            "X-From-Service": "transcode-service",
+        }
         self.storage_api_url = os.getenv("STORAGE_API_URL")
         self.zip_working_dir = os.getenv("ZIP_WORKING_DIR", "/app")
 
