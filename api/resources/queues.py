@@ -43,9 +43,15 @@ def __argument_wrapper(*, queue_name, routing_key, queue_type=global_queue_type)
 
 
 def __filesize_warning(filesize: str) -> bool:
-    units = {"b": 1, "kb": 10**3, "mb": 10**6, "gb": 10**9, "tb": 10**12}
-    number, unit = [filesize_part.strip() for filesize_part in filesize.lower().split()]
-    size_bytes = float(number) * units[unit]
+    try:
+        units = {"b": 1, "kb": 10**3, "mb": 10**6, "gb": 10**9, "tb": 10**12}
+        number, unit = [
+            filesize_part.strip() for filesize_part in filesize.lower().split()
+        ]
+        size_bytes = float(number) * units[unit]
+    except Exception:
+        # This means something went wrong with the filesize calculations
+        return False
 
     if size_bytes > 1 * units["gb"]:
         return True
@@ -79,7 +85,7 @@ def __do_transcode(
         parent_id=parent_job_id,
     )
     try:
-        filesize = data["mediafile"]["filesize"]
+        filesize = data["mediafile"].get("filesize", "unknown")
         app.logger.info(
             f"Starting transcode for {data['mediafile']['original_filename']}, size: {filesize}"
         )
@@ -143,30 +149,6 @@ def create_zip(message: Message):
     except Exception as ex:
         app.logger.error(f"Could not create ZIP-file {ex}")
         message.nack()
-
-
-@get_rabbit().queue(
-    **__argument_wrapper(
-        queue_name=f"{queue_prefix}.transcode.add.width.height",
-        routing_key=[
-            f"{routing_key_prefix}.transcode_add_width_height",
-            f"{routing_key_prefix}.file_uploaded.image.*",
-            f"{routing_key_prefix}.file_uploaded.video.*",
-        ],
-        queue_type="quorum",
-    ),
-    auto_ack=False,
-    full_message_object=True,
-)
-def transcode_add_width_height(message: Message):
-    body = message.json()
-    __do_transcode(
-        body,
-        "width_height",
-        ["image/", "video/"],
-        "Adding width & height for {} failed with:",
-    )
-    message.ack()
 
 
 @get_rabbit().queue(

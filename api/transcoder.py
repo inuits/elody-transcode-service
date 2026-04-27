@@ -525,7 +525,7 @@ class Transcoder(metaclass=Singleton):
             operation = {
                 "jpg": {
                     "func": self.transcode_to_jpeg,
-                    "args": [mediafile, read_location, write_location],
+                    "args": [mediafile, read_location, write_location, headers],
                 },
                 "mp3": {
                     "func": self.transcode_to_mp3,
@@ -533,13 +533,13 @@ class Transcoder(metaclass=Singleton):
                 },
                 "mp4": {
                     "func": self.transcode_to_mp4,
-                    "args": [read_location, write_location],
+                    "args": [mediafile, read_location, write_location, headers],
                 },
-                "width_height": {
-                    "func": self.add_width_height,
-                    "args": [mediafile, read_location, headers],
-                    "upload": False,
-                },
+                # "width_height": {
+                #     "func": self.add_width_height,
+                #     "args": [mediafile, read_location, headers],
+                #     "upload": False,
+                # },
             }.get(operation_name)
             if not operation:
                 raise Exception(f"Operation {operation_name} not supported")
@@ -628,7 +628,8 @@ class Transcoder(metaclass=Singleton):
             floor(src_imag_size[1] * scale_factor),
         )
 
-    def transcode_to_jpeg(self, mediafile, read_location, write_location):
+    def transcode_to_jpeg(self, mediafile, read_location, write_location, headers=None):
+        self.add_width_height(mediafile, read_location, headers)
         MAX_DIMENSION = 4000
         with Image.open(read_location) as src_img:
             exif = src_img.getexif()
@@ -666,7 +667,9 @@ class Transcoder(metaclass=Singleton):
         audio = pydub.AudioSegment.from_file(read_location)
         audio.export(write_location, format="mp3")
 
-    def transcode_to_mp4(self, read_location, write_location):
+    def transcode_to_mp4(self, mediafile, read_location, write_location, headers=None):
+        self.add_width_height(mediafile, read_location, headers)
+
         c = Converter()
         info = c.probe(read_location)
         opts = {
