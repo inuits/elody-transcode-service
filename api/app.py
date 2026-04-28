@@ -62,7 +62,6 @@ from resources.transcode import (
     MP3Transcode,
     MP4Transcode,
     PDFTranscode,
-    WidthHeightTranscode,
     ZipTranscode,
 )
 
@@ -73,7 +72,7 @@ api.add_resource(JpegTranscode, "/transcode/jpeg")
 api.add_resource(MP3Transcode, "/transcode/mp3")
 api.add_resource(MP4Transcode, "/transcode/mp4")
 api.add_resource(PDFTranscode, "/transcode/pdf")
-api.add_resource(WidthHeightTranscode, "/transcode/widthheight")
+# api.add_resource(WidthHeightTranscode, "/transcode/widthheight")
 api.add_resource(ZipTranscode, "/transcode/zip")
 
 if __name__ == "__main__":
