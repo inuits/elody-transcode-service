@@ -15,7 +15,7 @@ from converter import Converter
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
 import re
 
-Image.MAX_IMAGE_PIXELS = None
+Image.MAX_IMAGE_PIXELS = 800000000
 
 
 class Singleton(type):
