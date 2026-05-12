@@ -15,8 +15,6 @@ from converter import Converter
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
 import re
 
-Image.MAX_IMAGE_PIXELS = 800000000
-
 
 class Singleton(type):
     _instances = {}
@@ -430,6 +428,7 @@ class Transcoder(metaclass=Singleton):
             os.remove(zip_location)
 
     def add_width_height(self, mediafile, read_location, headers=None):
+        Image.MAX_IMAGE_PIXELS = None
         if "image/" in mediafile["mimetype"]:
             with Image.open(read_location) as img:
                 data = {"img_width": img.width, "img_height": img.height}
@@ -629,8 +628,9 @@ class Transcoder(metaclass=Singleton):
         )
 
     def transcode_to_jpeg(self, mediafile, read_location, write_location, headers=None):
-        self.add_width_height(mediafile, read_location, headers)
         MAX_DIMENSION = 4000
+        Image.MAX_IMAGE_PIXELS = None
+        self.add_width_height(mediafile, read_location, headers)
         with Image.open(read_location) as src_img:
             exif = src_img.getexif()
             exif.pop(TiffImagePlugin.STRIPOFFSETS, None)
@@ -713,6 +713,7 @@ class Transcoder(metaclass=Singleton):
             pass
 
     def transcode_to_pdf(self, mediafiles, read_location, write_location):
+        Image.MAX_IMAGE_PIXELS = None
         images = [
             Image.open(f"{os.path.join(read_location, f.get('filename'))}")
             for f in mediafiles
