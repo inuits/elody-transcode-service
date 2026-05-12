@@ -29,11 +29,15 @@ routing_key_prefix = getenv("ROUTING_KEY_PREFIX", "dams")
 delivery_limit = getenv("DELIVERY_LIMIT", 4)
 
 
-def __argument_wrapper(*, queue_name, routing_key, queue_type=global_queue_type):
+def __argument_wrapper(
+    *, queue_name, routing_key, queue_type=global_queue_type, consumer_timeout=None
+):
     arguments = {"routing_key": routing_key}
     if getenv("AMQP_MANAGER", "amqpstorm_flask") == "amqpstorm_flask":
         arguments["queue_name"] = queue_name
         queue_arguments = {}
+        if consumer_timeout:
+            queue_arguments.update({"x-consumer-timeout": consumer_timeout})
         if queue_type:
             queue_arguments.update({"x-queue-type": queue_type})
         if delivery_limit and queue_type == "quorum":
@@ -197,6 +201,7 @@ def transcode_to_mp3(message: Message):
             f"{routing_key_prefix}.file_uploaded.video.*",
         ],
         queue_type="quorum",
+        consumer_timeout=14400000,
     ),
     auto_ack=False,
     full_message_object=True,
