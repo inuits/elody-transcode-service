@@ -307,7 +307,10 @@ class Transcoder(metaclass=Singleton):
         url = f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
         headers = {**{"Accept": "text/uri-list"}, **headers}
         req = requests.post(url, json=mediafile, headers=headers)
-        return req.text.strip().replace('"', "") + f"&user_email={user_email}"
+        upload_link = req.text.strip().replace('"', "") + f"&user_email={user_email}"
+
+        print(f"{upload_link = }\n", flush=True)
+        return upload_link
 
     def __patch_mediafile(self, mediafile, payload, headers):
         req = requests.patch(
