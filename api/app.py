@@ -33,7 +33,7 @@ app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(16))
 logging.basicConfig(
     format="%(asctime)s %(process)d,%(threadName)s %(filename)s:%(lineno)d [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    level=logging.INFO,
+    level=os.getenv("LOGLEVEL", "INFO").upper(),
 )
 logger = logging.getLogger(__name__)
 
