@@ -144,7 +144,6 @@ def __do_transcode(
         queue_name=f"{queue_prefix}.create.zip",
         routing_key=f"{routing_key_prefix}.create_zip",
         queue_type="quorum",
-        delivery_limit=1,
     ),
     auto_ack=False,
     full_message_object=True,
