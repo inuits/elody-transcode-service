@@ -30,7 +30,12 @@ delivery_limit = getenv("DELIVERY_LIMIT", 4)
 
 
 def __argument_wrapper(
-    *, queue_name, routing_key, queue_type=global_queue_type, consumer_timeout=None
+    *,
+    queue_name,
+    routing_key,
+    queue_type=global_queue_type,
+    consumer_timeout=None,
+    delivery_limit=delivery_limit,
 ):
     arguments = {"routing_key": routing_key}
     if getenv("AMQP_MANAGER", "amqpstorm_flask") == "amqpstorm_flask":
@@ -139,6 +144,7 @@ def __do_transcode(
         queue_name=f"{queue_prefix}.create.zip",
         routing_key=f"{routing_key_prefix}.create_zip",
         queue_type="quorum",
+        delivery_limit=1,
     ),
     auto_ack=False,
     full_message_object=True,

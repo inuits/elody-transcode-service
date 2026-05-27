@@ -298,6 +298,8 @@ class Transcoder(metaclass=Singleton):
         headers=None,
         user_email=None,
     ):
+        if not headers:
+            headers = {}
         mediafile = {
             "filename": zip_filename,
             "technical_origin": "download",
@@ -307,6 +309,7 @@ class Transcoder(metaclass=Singleton):
         url = f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
         headers = {**{"Accept": "text/uri-list"}, **headers}
         req = requests.post(url, json=mediafile, headers=headers)
+        req.raise_for_status()
         return req.text.strip().replace('"', "") + f"&user_email={user_email}"
 
     def __patch_mediafile(self, mediafile, payload, headers):
@@ -336,7 +339,7 @@ class Transcoder(metaclass=Singleton):
             headers=self.__get_headers(headers),
         )
         if req.status_code != 200:
-            app.logger.info(
+            app.logger.warning(
                 f"Failed report progress on download entity, status code: {req.status_code}",
             )
 
@@ -414,6 +417,7 @@ class Transcoder(metaclass=Singleton):
         """Add zip to download entity and upload to S3
         Also deletes the zip from the filesystem
         """
+        app.logger.debug(f"Starting zip upload for {download_entity_id}.")
         with open(zip_location, "rb") as zip:
             zip_upload_link = self.__get_zip_upload_link(
                 download_entity_id,
@@ -423,7 +427,7 @@ class Transcoder(metaclass=Singleton):
             )
             req = requests.post(zip_upload_link, data=zip)
             if req.status_code != 201:
-                app.logger.info(
+                app.logger.warning(
                     f"Failed to upload zip to download entity, status code: {req.status_code}",
                 )
                 return
@@ -460,6 +464,9 @@ class Transcoder(metaclass=Singleton):
                 temp_dir,
                 f"{download_entity_title}-{datetime_string}.zip",
             )
+            app.logger.info(
+                f"Starting zip creation for {download_entity_id} in dir {zip_location}."
+            )
             with ZipFile(zip_location, "w") as zip:
                 mediafiles_for_entity = self.__add_entities_to_zip(
                     zip,
@@ -468,12 +475,16 @@ class Transcoder(metaclass=Singleton):
                     headers,
                     user_email=user_email,
                 )
+                app.logger.debug(f"Finished adding entities for {download_entity_id}.")
                 self.__add_mediafiles_to_zip(
                     zip,
                     temp_dir,
                     request_body.get("mediafiles", list()),
                     headers,
                     user_email=user_email,
+                )
+                app.logger.debug(
+                    f"Finished adding mediafiles for {download_entity_id}."
                 )
                 object_ids = {
                     "entities": request_body.get("entities", list()),
@@ -496,16 +507,22 @@ class Transcoder(metaclass=Singleton):
                         request_body.get(csv_fields_definition_field, list()),
                         headers,
                     )
+                app.logger.debug(f"Added csvs for {download_entity_id}.")
             if download_entity_id:
-                self.__upload_zip_to_download_entity(
-                    download_entity_id,
-                    zip_location,
-                    headers,
-                    user_email=user_email,
-                )
-                self.__set_download_entity_progress(
-                    download_entity_id, "Finished", headers
-                )
+                try:
+                    self.__upload_zip_to_download_entity(
+                        download_entity_id,
+                        zip_location,
+                        headers,
+                        user_email=user_email,
+                    )
+                    self.__set_download_entity_progress(
+                        download_entity_id, "Finished", headers
+                    )
+                except Exception:
+                    self.__set_download_entity_progress(
+                        download_entity_id, "Failed", headers
+                    )
 
     def transcode(
         self,
