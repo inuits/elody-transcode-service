@@ -157,6 +157,7 @@ def create_zip(message: Message):
         message.ack()
     except Exception as ex:
         app.logger.error(f"Could not create ZIP-file {ex}")
+        app.logger.exception(ex, stack_info=True)
         message.nack()
 
 
