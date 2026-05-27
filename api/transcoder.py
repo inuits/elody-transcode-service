@@ -281,7 +281,7 @@ class Transcoder(metaclass=Singleton):
                 f"Could not get mediafile details from {mediafiles_url}\n"
                 + req.text.strip(),
             )
-        req.raise_for_sattus()
+        req.raise_for_status()
         return req.json()
 
     def __get_mediafile_download_link(self, mediafile, headers=None, user_email=None):
