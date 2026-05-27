@@ -286,7 +286,11 @@ class Transcoder(metaclass=Singleton):
 
     def __get_mediafile_download_link(self, mediafile, headers=None, user_email=None):
         mediafile = self.__get_mediafile(self.__get_raw_id(mediafile))
+        app.logger.debug(
+            f"Mediafile {self.__get_raw_id(mediafile)} raw location: {mediafile.get('original_file_location')}"
+        )
         parsed_uri = urlparse(mediafile.get("original_file_location"))
+
         user_email_parameter = f"&user_email={user_email}" if user_email else ""
         return f"{self.storage_api_url.replace('/storage/v1', '')}{parsed_uri.path}?{parsed_uri.query}{user_email_parameter}"
 
