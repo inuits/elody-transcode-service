@@ -123,6 +123,7 @@ class Transcoder(metaclass=Singleton):
         user_email=None,
     ):
         filename = mediafile["original_filename"]
+        app.logger.debug(f"Adding {filename} to zip.")
         read_location = os.path.join(working_dir, filename)
         with open(read_location, "wb") as input_file:
             self.__get_file(
@@ -280,6 +281,7 @@ class Transcoder(metaclass=Singleton):
                 f"Could not get mediafile details from {mediafiles_url}\n"
                 + req.text.strip(),
             )
+        req.raise_for_sattus()
         return req.json()
 
     def __get_mediafile_download_link(self, mediafile, headers=None, user_email=None):
