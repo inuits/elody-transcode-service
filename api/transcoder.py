@@ -1,5 +1,7 @@
 import os
+import re
 import shutil
+import subprocess
 import tempfile
 from datetime import datetime
 from math import floor, sqrt
@@ -9,11 +11,9 @@ from zipfile import ZipFile
 from zoneinfo import ZoneInfo
 
 import app
-import pydub
 import requests
 from converter import Converter
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
-import re
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -405,6 +405,7 @@ class Transcoder(metaclass=Singleton):
         storage_url = f"{self.storage_api_url}/upload/transcode?id={self.__get_raw_id(mediafile)}&ticket_id={ticket_id}&ignore_duplicate_check={ignore_duplicate_check}"
         if parent_job_id:
             storage_url += f"&parent_job_id={parent_job_id}"
+        app.logger.debug(f"Uploading with {storage_url}")
         req = requests.post(
             storage_url,
             data=file_bytes,
@@ -691,8 +692,21 @@ class Transcoder(metaclass=Singleton):
                     app.logger.info(f"First conversion failed with: {ex}")
 
     def transcode_to_mp3(self, read_location, write_location):
-        audio = pydub.AudioSegment.from_file(read_location)
-        audio.export(write_location, format="mp3")
+        try:
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", read_location, write_location],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            app.logger.debug("MP3 transcode finished")
+
+        except subprocess.CalledProcessError as e:
+            app.logger.error(f"FFmpeg failed with exit code {e.returncode}")
+            app.logger.error(f"FFmpeg error log:\n{e.stderr}")
+
+            raise
 
     def transcode_to_mp4(self, mediafile, read_location, write_location, headers=None):
         self.add_width_height(mediafile, read_location, headers)
