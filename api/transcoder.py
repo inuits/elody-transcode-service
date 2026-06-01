@@ -510,7 +510,7 @@ class Transcoder(metaclass=Singleton):
                         temp_dir,
                         object_ids.get(object_type),
                         object_type,
-                        request_body.get(csv_fields_definition_field, list()),
+                        request_body.get(csv_fields_definition_field, []),
                         headers,
                     )
                 app.logger.debug(f"Added csvs for {download_entity_id}.")
@@ -567,6 +567,7 @@ class Transcoder(metaclass=Singleton):
             if not operation:
                 raise Exception(f"Operation {operation_name} not supported")
             with open(read_location, "wb") as input_file:
+                app.logger.info("Starting download of file")
                 self.__get_file(
                     self.__get_mediafile_download_link(
                         mediafile,
@@ -576,6 +577,7 @@ class Transcoder(metaclass=Singleton):
                     input_file,
                     headers,
                 )
+                app.logger.info("Finished download of file")
             operation["func"](*operation["args"])
             if operation.get("upload", True):
                 with open(write_location, "rb") as output_file:
@@ -659,8 +661,10 @@ class Transcoder(metaclass=Singleton):
             exif.pop(TiffImagePlugin.STRIPOFFSETS, None)
             artist, copyrights = self.__get_exif_for_mediafile(mediafile)
             self.__add_artist_and_copyright_to_exif(exif, artist, copyrights)
-            if src_img.mode == "I;16":
-                src_img = src_img.point(lambda i: i * (1 / 255))
+            if src_img.mode in ("I;16", "I;16B"):
+                src_img = (
+                    src_img.convert("I").point(lambda i: i * (1 / 256)).convert("L")
+                )
             ImageOps.exif_transpose(src_img, in_place=True)
 
             if resized_size := self.transcode_resize(src_img.size, MAX_DIMENSION):
