@@ -1,0 +1,69 @@
+[project]
+name = "Elody-transcode-service"
+requires-python = "~=3.13.0"
+version = "0.0.1"
+dependencies = [
+    "amqpstorm==2.11.1",
+    "amqpstorm-flask==0.6.0.dev0",
+    "aniso8601==10.0.0",
+    "authlib==1.5.1",
+    "blinker==1.9.0",
+    "certifi==2024.8.30",
+    "cffi==1.17.1",
+    "charset-normalizer==3.4.1",
+    "click==8.1.8",
+    "cloudevents==1.11.0",
+    "cryptography==44.0.2",
+    "decorator==5.2.1",
+    "elody[loader]==0.0.252",
+    "flask==3.1.0",
+    "flask-restful==0.3.10",
+    "flask-swagger-ui==4.11.1",
+    "gunicorn==23.0.0",
+    "idna==3.7",
+    "inuits-policy-based-auth==10.0.1",
+    "itsdangerous==2.2.0",
+    "jinja2==3.1.4",
+    "markupsafe==3.0.1",
+    "packaging==24.1",
+    "pika==1.3.2",
+    "pillow==10.4.0",
+    "py==1.11.0",
+    "py-healthcheck==1.10.1",
+    "pycparser==2.22",
+    "pytz==2024.1",
+    "rabbitmq-pika-flask==1.2.35",
+    "requests==2.32.3",
+    "retry==0.9.2",
+    "sentry-sdk[flask]==2.16.0",
+    "six==1.16.0",
+    "urllib3==2.2.1",
+    "video-converter",
+    "werkzeug==3.1.3",
+]
+
+[tool.ruff.lint]
+extend-select = [
+  "F",      # Pyflakes: Basic logical errors and unused variables
+  "E",      # pycodestyle errors: Actual PEP8 violations (not just whitespace)
+  "I",      # isort: Keeps imports tidy automatically
+  "UP",     # pyupgrade: Keeps syntax modern (mostly auto-fixable)
+  "B",      # flake8-bugbear: Essential for catching common design flaws
+  "PTH",    # flake8-use-pathlib: prefer pathlib objects over os.path
+  "RUF",    # Ruff-specific: Generally sensible and high-performance rules
+  "C4",     # flake8-comprehensions: enforce better list/dict/set comprehensions
+  "LOG",    # flake8-logging: catch bad logging practices (like f-strings in log messages)
+  "T20",    # flake8-print: catch leftover debug print statements
+  "DTZ",    # Datetime Timezone: Since we're doing quite some datetime logic around the notifications, this should help catch bugs
+  "FIX002", # Errors on lines with a TODO, disable for those lines with # noqa: FIX002
+]
+ignore = [
+  "A003",   # Allow class attributes to shadow built-ins (e.g., model.id)
+  "B006",   # Allow mutables as default arg: This actually needs to be fixed since it can cause bugs but generally we don't use it in a way that can actually cause bugs
+  "RUF012", # Allow mutables as default class member: This actually needs to be fixed since it can cause bugs
+  "E722",   # Allow bare excepts (we don't have enough custom exceptions)
+  "E501",   # Ignore line length (let the formatter handle this)
+]
+
+[tool.uv.sources]
+video-converter = { git = "https://github.com/UbiCastTeam/python-video-converter.git" }

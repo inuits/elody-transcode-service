@@ -1,9 +1,30 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
-  "pip_requirements": {
-    "fileMatch": ["^requirements(?:[_-](dev|test))?\\.txt$"]
-  },
-  "prConcurrentLimit": 0,
-  "prHourlyLimit": 0
+  "packageRules": [
+    {
+      "description": "Disable all requirements.txt updates by default",
+      "matchManagers": ["pip_requirements", "pep621"],
+      "enabled": false
+    },
+    {
+      "description": "Re-enable specific packages ",
+      "matchManagers": ["pip_requirements", "pep621"],
+      "matchPackageNames": [
+        "AMQPStorm",
+        "amqpstorm-flask",
+        "apscheduler",
+        "Authlib",
+        "certifi",
+        "cffi",
+        "charset-normalizer",
+        "cryptography",
+        "elody",
+        "inuits-policy-based-auth",
+        "requests",
+        "requests-cache"
+      ],
+      "enabled": true
+    }
+  ]
 }
