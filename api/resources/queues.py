@@ -129,14 +129,16 @@ def __do_transcode(
         format_error_message = (
             f"{error_message.format(data['mediafile']['filename'])} {ex.message}"
         )
+        fail_job(job_id, get_rabbit=get_rabbit, exception_message=format_error_message)
+        app.logger.exception(ex, stack_info=True)
+        raise
     except Exception as ex:
         format_error_message = (
             f"{error_message.format(data['mediafile']['filename'])} {ex}"
         )
-
-    if format_error_message:
         fail_job(job_id, get_rabbit=get_rabbit, exception_message=format_error_message)
-        app.logger.error(format_error_message)
+        app.logger.exception(ex, stack_info=True)
+        raise
 
 
 @get_rabbit().queue(
@@ -174,11 +176,13 @@ def create_zip(message: Message):
     full_message_object=True,
 )
 def transcode_to_jpeg(message: Message):
-    # def transcode_to_jpeg(routing_key, body, message_id):
 
     body = message.json()
-    __do_transcode(body, "jpg", ["image/"], "Transcoding {} to jpeg failed with:")
-    message.ack()
+    try:
+        __do_transcode(body, "jpg", ["image/"], "Transcoding {} to jpeg failed with:")
+        message.ack()
+    except:
+        message.nack(requeue=True)
 
 
 @get_rabbit().queue(
@@ -195,8 +199,11 @@ def transcode_to_jpeg(message: Message):
 )
 def transcode_to_mp3(message: Message):
     body = message.json()
-    __do_transcode(body, "mp3", ["audio/"], "Transcoding {} to mp3 failed with:")
-    message.ack()
+    try:
+        __do_transcode(body, "mp3", ["audio/"], "Transcoding {} to mp3 failed with:")
+        message.ack()
+    except:
+        message.nack(requeue=True)
 
 
 @get_rabbit().queue(
@@ -214,5 +221,8 @@ def transcode_to_mp3(message: Message):
 )
 def transcode_to_mp4(message: Message):
     body = message.json()
-    __do_transcode(body, "mp4", ["video/"], "Transcoding {} to mp4 failed with:")
-    message.ack()
+    try:
+        __do_transcode(body, "mp4", ["video/"], "Transcoding {} to mp4 failed with:")
+        message.ack()
+    except:
+        message.nack(requeue=True)

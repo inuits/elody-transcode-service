@@ -5,6 +5,8 @@ import subprocess
 import tempfile
 from datetime import datetime
 from math import floor, sqrt
+from pathlib import Path
+from typing import cast
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 from zipfile import ZipFile
@@ -52,17 +54,17 @@ class Transcoder(metaclass=Singleton):
     def __add_entities_to_zip(
         self,
         zipfile,
-        working_dir,
+        working_dir: Path,
         entity_ids,
         headers=None,
         user_email=None,
     ):
-        mediafile_ids = list()
+        mediafile_ids = []
         for entity_id in entity_ids:
             entity = self.__get_entity(entity_id)
             entity_identifier = self.__get_entity_identifier(entity)
             entity_mediafiles = self.__get_entity_mediafiles(entity_id, headers)
-            for mediafile in entity_mediafiles.get("results", list()):
+            for mediafile in entity_mediafiles.get("results", []):
                 mediafile_ids.append(self.__get_raw_id(mediafile))
                 self.__add_single_file_to_zip(
                     zipfile,
@@ -96,7 +98,7 @@ class Transcoder(metaclass=Singleton):
     def __add_objects_csv_to_zip(
         self,
         zipfile,
-        working_dir,
+        working_dir: Path,
         object_ids,
         object_type,
         fields=None,
@@ -108,24 +110,24 @@ class Transcoder(metaclass=Singleton):
             fields,
             headers,
         ):
-            objects_csv_path = os.path.join(working_dir, f"{object_type}.csv")
-            with open(objects_csv_path, "w") as objects_csv:
+            objects_csv_path = working_dir / f"{object_type}.csv"
+            with objects_csv_path.open("w") as objects_csv:
                 objects_csv.write(csv_for_objects)
             zipfile.write(objects_csv_path, f"{object_type}.csv")
 
     def __add_single_file_to_zip(
         self,
         zipfile,
-        working_dir,
+        working_dir: Path,
         mediafile,
         headers=None,
-        destination_path="",
+        destination_path: Path = Path(),
         user_email=None,
     ):
-        filename = mediafile["original_filename"]
+        filename: str = mediafile["original_filename"]
         app.logger.debug(f"Adding {filename} to zip.")
-        read_location = os.path.join(working_dir, filename)
-        with open(read_location, "wb") as input_file:
+        read_location = working_dir / filename
+        with read_location.open("wb") as input_file:
             self.__get_file(
                 self.__get_mediafile_download_link(
                     mediafile,
@@ -135,18 +137,21 @@ class Transcoder(metaclass=Singleton):
                 input_file,
                 headers,
             )
-        zipfile.write(read_location, os.path.join(destination_path, filename))
-        os.remove(read_location)
+        zipfile.write(read_location, Path(destination_path) / filename)
+        read_location.unlink()
 
     def __get_csv_for_objects(
         self,
         object_ids,
         object_type="entities",
         fields=None,
-        headers=None,
+        headers: dict | None = None,
     ):
+
         if not object_ids:
             return None
+        if headers is None:
+            headers = {}
 
         if self.csv_exporter_enabled:
             req = requests.post(
@@ -193,13 +198,13 @@ class Transcoder(metaclass=Singleton):
             )
         return req.json()
 
-    # TODO: We should move this to the elody-sdk
+    # TODO: We should move this to the elody-sdk  # noqa: FIX002
     @staticmethod
     def __parse_filename_unfriendly_string(
-        input: str,
+        input: str | None,
         *,
         replace_char="_",
-    ) -> str:
+    ) -> str | None:
         if input is None:
             return None
 
@@ -238,7 +243,7 @@ class Transcoder(metaclass=Singleton):
         return response
 
     def __get_exif_for_mediafile(self, mediafile):
-        artist, copyrights = list(), list()
+        artist, copyrights = [], []
         if photographer := self.__get_item_metadata_value(mediafile, "photographer"):
             artist.append(f"photographer: {photographer}")
         if source := self.__get_item_metadata_value(mediafile, "source"):
@@ -261,7 +266,7 @@ class Transcoder(metaclass=Singleton):
 
     def __get_headers(self, headers=None):
         if headers and isinstance(headers, dict):
-            return {**self.headers, **headers}
+            return {**self.headers, **(headers)}
         return self.headers
 
     def __get_item_metadata_value(self, item, key):
@@ -292,7 +297,7 @@ class Transcoder(metaclass=Singleton):
         parsed_uri = urlparse(mediafile.get("original_file_location"))
 
         user_email_parameter = f"&user_email={user_email}" if user_email else ""
-        return f"{self.storage_api_url.replace('/storage/v1', '')}{parsed_uri.path}?{parsed_uri.query}{user_email_parameter}"
+        return f"{self.storage_api_url.replace('/storage/v1', '')}{parsed_uri.path}?{parsed_uri.query}{user_email_parameter}"  # ty:ignore[unresolved-attribute]
 
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
@@ -309,7 +314,7 @@ class Transcoder(metaclass=Singleton):
         mediafile = {
             "filename": zip_filename,
             "technical_origin": "download",
-            "metadata": list(),
+            "metadata": [],
             "relation_properties": {"is_downloadset": True},
         }
         url = f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
@@ -365,7 +370,7 @@ class Transcoder(metaclass=Singleton):
             raise Exception(req.text.strip())
         upload_link = req.text.strip()
         if master_entity_id:
-            mediafile_id = parse_qs(urlparse(upload_link).query).get("id", list())[0]
+            mediafile_id = parse_qs(urlparse(upload_link).query).get("id", [])[0]
             req = requests.post(
                 f"{self.collection_api_url}/entities/{master_entity_id}/relations",
                 json=[{"key": mediafile_id, "type": "hasMediafile"}],
@@ -417,7 +422,7 @@ class Transcoder(metaclass=Singleton):
     def __upload_zip_to_download_entity(
         self,
         download_entity_id,
-        zip_location,
+        zip_location: Path,
         headers=None,
         user_email=None,
     ):
@@ -425,10 +430,10 @@ class Transcoder(metaclass=Singleton):
         Also deletes the zip from the filesystem
         """
         app.logger.debug(f"Starting zip upload for {download_entity_id}.")
-        with open(zip_location, "rb") as zip:
+        with zip_location.open("rb") as zip:
             zip_upload_link = self.__get_zip_upload_link(
                 download_entity_id,
-                os.path.basename(zip_location),
+                zip_location.name,
                 headers,
                 user_email=user_email,
             )
@@ -438,7 +443,7 @@ class Transcoder(metaclass=Singleton):
                     f"Failed to upload zip to download entity, status code: {req.status_code}",
                 )
                 return
-            os.remove(zip_location)
+            zip_location.unlink()
 
     def add_width_height(self, mediafile, read_location, headers=None):
         if "image/" in mediafile["mimetype"]:
@@ -461,60 +466,78 @@ class Transcoder(metaclass=Singleton):
                 "In Progress",
                 headers,
             )
-        zip_location = None
         with tempfile.TemporaryDirectory() as temp_dir:
+            temp_dir_path = Path(temp_dir)
             datetime_string = datetime.now(ZoneInfo("Europe/Brussels")).strftime(
                 "%Y-%m-%d_%H-%M-%S",
             )
             download_entity_title = request_body.get("download_entity_title")
-            zip_location = os.path.join(
-                temp_dir,
-                f"{download_entity_title}-{datetime_string}.zip",
+            zip_location = (
+                temp_dir_path / f"{download_entity_title}-{datetime_string}.zip"
             )
             app.logger.info(
                 f"Starting zip creation for {download_entity_id} in dir {zip_location}."
             )
             with ZipFile(zip_location, "w") as zip:
-                mediafiles_for_entity = self.__add_entities_to_zip(
-                    zip,
-                    temp_dir,
-                    request_body.get("entities", list()),
-                    headers,
-                    user_email=user_email,
-                )
-                app.logger.debug(f"Finished adding entities for {download_entity_id}.")
-                self.__add_mediafiles_to_zip(
-                    zip,
-                    temp_dir,
-                    request_body.get("mediafiles", list()),
-                    headers,
-                    user_email=user_email,
-                )
-                app.logger.debug(
-                    f"Finished adding mediafiles for {download_entity_id}."
-                )
+                try:
+                    mediafiles_for_entity = self.__add_entities_to_zip(
+                        zip,
+                        temp_dir_path,
+                        request_body.get("entities", []),
+                        headers,
+                        user_email=user_email,
+                    )
+                    app.logger.debug(
+                        f"Finished adding entities for {download_entity_id}."
+                    )
+                except:
+                    self.__set_download_entity_progress(
+                        download_entity_id, "Failed", headers
+                    )
+                    raise
+                try:
+                    self.__add_mediafiles_to_zip(
+                        zip,
+                        temp_dir,
+                        request_body.get("mediafiles", []),
+                        headers,
+                        user_email=user_email,
+                    )
+                    app.logger.debug(
+                        f"Finished adding mediafiles for {download_entity_id}."
+                    )
+                except:
+                    self.__set_download_entity_progress(
+                        download_entity_id, "Failed", headers
+                    )
+                    raise
                 object_ids = {
-                    "entities": request_body.get("entities", list()),
+                    "entities": request_body.get("entities", []),
                     "mediafiles": list(
                         set(
-                            request_body.get("mediafiles", list())
-                            + mediafiles_for_entity,
+                            request_body.get("mediafiles", []) + mediafiles_for_entity,
                         ),
                     ),
                 }
-                for object_type, csv_fields_definition_field in {
-                    "entities": "csv_entity_columns",
-                    "mediafiles": "csv_mediafile_columns",
-                }.items():
-                    self.__add_objects_csv_to_zip(
-                        zip,
-                        temp_dir,
-                        object_ids.get(object_type),
-                        object_type,
-                        request_body.get(csv_fields_definition_field, []),
-                        headers,
+                try:
+                    for object_type, csv_fields_definition_field in {
+                        "entities": "csv_entity_columns",
+                        "mediafiles": "csv_mediafile_columns",
+                    }.items():
+                        self.__add_objects_csv_to_zip(
+                            zip,
+                            temp_dir_path,
+                            object_ids.get(object_type),
+                            object_type,
+                            request_body.get(csv_fields_definition_field, []),
+                            headers,
+                        )
+                    app.logger.debug(f"Added csvs for {download_entity_id}.")
+                except:
+                    self.__set_download_entity_progress(
+                        download_entity_id, "Failed", headers
                     )
-                app.logger.debug(f"Added csvs for {download_entity_id}.")
+                    raise
             if download_entity_id:
                 try:
                     self.__upload_zip_to_download_entity(
@@ -541,10 +564,12 @@ class Transcoder(metaclass=Singleton):
         ignore_duplicate_check=False,
     ):
         with tempfile.TemporaryDirectory() as temp_dir:
-            read_location = os.path.join(temp_dir, mediafile["filename"])
-            write_location = os.path.join(
-                temp_dir,
-                f"{os.path.splitext(mediafile['original_filename'])[0]}.{operation_name}",
+            temp_dir_path = Path(temp_dir)
+            original_filename_as_path = Path(mediafile["original_filename"])
+            read_location = temp_dir_path / cast(str, mediafile["filename"])
+            write_location = (
+                temp_dir_path
+                / f"{original_filename_as_path.parent / original_filename_as_path.stem}.{operation_name}"
             )
             operation = {
                 "jpg": {
@@ -559,15 +584,10 @@ class Transcoder(metaclass=Singleton):
                     "func": self.transcode_to_mp4,
                     "args": [mediafile, read_location, write_location, headers],
                 },
-                # "width_height": {
-                #     "func": self.add_width_height,
-                #     "args": [mediafile, read_location, headers],
-                #     "upload": False,
-                # },
             }.get(operation_name)
             if not operation:
                 raise Exception(f"Operation {operation_name} not supported")
-            with open(read_location, "wb") as input_file:
+            with read_location.open("wb") as input_file:
                 app.logger.info("Starting download of file")
                 self.__get_file(
                     self.__get_mediafile_download_link(
@@ -579,12 +599,12 @@ class Transcoder(metaclass=Singleton):
                     headers,
                 )
                 app.logger.info("Finished download of file")
-            operation["func"](*operation["args"])
+            operation["func"](*operation["args"])  # ty:ignore[call-non-callable, not-iterable]
             if operation.get("upload", True):
-                with open(write_location, "rb") as output_file:
+                with write_location.open("rb") as output_file:
                     self.__upload_transcode(
                         mediafile,
-                        os.path.basename(write_location),
+                        write_location.name,
                         output_file,
                         headers,
                         parent_job_id,
@@ -600,21 +620,19 @@ class Transcoder(metaclass=Singleton):
         user_email=None,
     ):
         with tempfile.TemporaryDirectory() as temp_dir:
-            write_location = os.path.join(
-                temp_dir,
-                f"{uuid4()}.{operation_name}",
-            )
+            temp_dir_path = Path(temp_dir)
+            write_location = temp_dir_path / f"{uuid4()}.{operation_name}"
             operation = {
                 "pdf": {
                     "func": self.transcode_to_pdf,
-                    "args": [mediafiles, temp_dir, write_location],
+                    "args": [mediafiles, temp_dir_path, write_location],
                 },
             }.get(operation_name)
             if not operation:
                 raise Exception(f"Operation {operation_name} not supported")
             for mediafile in mediafiles:
-                read_location = os.path.join(temp_dir, mediafile["filename"])
-                with open(read_location, "wb") as input_file:
+                read_location = temp_dir_path / cast(str, mediafile["filename"])
+                with read_location.open("wb") as input_file:
                     self.__get_file(
                         self.__get_mediafile_download_link(
                             mediafile,
@@ -624,11 +642,11 @@ class Transcoder(metaclass=Singleton):
                         input_file,
                         headers,
                     )
-            operation["func"](*operation["args"])
+            operation["func"](*operation["args"])  # ty:ignore[call-non-callable, not-iterable]
             if operation.get("upload", True):
-                with open(write_location, "rb") as output_file:
+                with write_location.open("rb") as output_file:
                     self.__upload_mediafile(
-                        os.path.basename(write_location),
+                        write_location.name,
                         output_file,
                         headers,
                         master_entity_id,
@@ -753,10 +771,9 @@ class Transcoder(metaclass=Singleton):
         for _ in c.convert(read_location, write_location, opts, timeout=0):
             pass
 
-    def transcode_to_pdf(self, mediafiles, read_location, write_location):
+    def transcode_to_pdf(self, mediafiles, read_location: Path, write_location: Path):
         images = [
-            Image.open(f"{os.path.join(read_location, f.get('filename'))}")
-            for f in mediafiles
+            Image.open(f"{read_location / f.get('filename')}") for f in mediafiles
         ]
         images[0].save(
             write_location,
