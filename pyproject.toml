@@ -46,6 +46,7 @@ dependencies = [
 extend-select = [
   "F",      # Pyflakes: Basic logical errors and unused variables
   "E",      # pycodestyle errors: Actual PEP8 violations (not just whitespace)
+  "ERA",    # Eradicate: remove commented out code
   "I",      # isort: Keeps imports tidy automatically
   "UP",     # pyupgrade: Keeps syntax modern (mostly auto-fixable)
   "B",      # flake8-bugbear: Essential for catching common design flaws
