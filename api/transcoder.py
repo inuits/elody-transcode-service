@@ -3,6 +3,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 from datetime import datetime
 from math import floor, sqrt
 from pathlib import Path
@@ -16,6 +17,8 @@ import app
 import requests
 from converter import Converter
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
+from requests.exceptions import ChunkedEncodingError, ConnectionError
+from urllib3.exceptions import IncompleteRead, ProtocolError
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -258,11 +261,47 @@ class Transcoder(metaclass=Singleton):
             copyrights = ", ".join(copyrights)
         return artist, copyrights
 
-    def __get_file(self, url, output, headers=None):
-        with requests.get(url, headers=self.__get_headers(headers), stream=True) as req:
-            if req.status_code != 200:
-                raise Exception(f"Could not get file from {url}\n" + req.text.strip())
-            shutil.copyfileobj(req.raw, output)
+    def __get_file(self, url, output, headers=None, max_retries=5):
+        retries = 0
+        base_headers = self.__get_headers(headers) or {}
+
+        while retries <= max_retries:
+            try:
+                req_headers = base_headers.copy()
+                current_bytes = output.tell()
+                if current_bytes > 0:
+                    req_headers["Range"] = f"bytes={current_bytes}-"
+
+                with requests.get(url, headers=req_headers, stream=True) as req:
+                    if req.status_code not in (200, 206):
+                        raise Exception(
+                            f"Could not get file from {url}\nStatus: {req.status_code}\n{req.text.strip()}"
+                        )
+
+                    if req.status_code == 200 and current_bytes > 0:
+                        output.seek(0)
+                        output.truncate(0)
+
+                    shutil.copyfileobj(req.raw, output)
+
+                return
+
+            except (
+                IncompleteRead,
+                ChunkedEncodingError,
+                ConnectionError,
+                ProtocolError,
+            ) as e:
+                retries += 1
+                if retries > max_retries:
+                    raise Exception(
+                        f"Failed to fully download {url} after {max_retries} retries. Last error: {e}"
+                    ) from e
+
+                time.sleep(2**retries)
+                app.logger.warning(
+                    f"Network drop detected. Resuming download... (Attempt {retries}/{max_retries})"
+                )
 
     def __get_headers(self, headers=None):
         if headers and isinstance(headers, dict):
@@ -445,12 +484,12 @@ class Transcoder(metaclass=Singleton):
                 return
             zip_location.unlink()
 
-    def add_width_height(self, mediafile, read_location, headers=None):
+    def add_width_height(self, mediafile, read_location: Path, headers=None):
         if "image/" in mediafile["mimetype"]:
-            with Image.open(read_location) as img:
+            with Image.open(str(read_location)) as img:
                 data = {"img_width": img.width, "img_height": img.height}
         else:
-            info = Converter().probe(read_location)
+            info = Converter().probe(str(read_location))
             data = {
                 "img_width": info.video.video_width,
                 "img_height": info.video.video_height,
@@ -726,11 +765,13 @@ class Transcoder(metaclass=Singleton):
 
             raise
 
-    def transcode_to_mp4(self, mediafile, read_location, write_location, headers=None):
+    def transcode_to_mp4(
+        self, mediafile, read_location: Path, write_location: Path, headers=None
+    ):
         self.add_width_height(mediafile, read_location, headers)
 
         c = Converter()
-        info = c.probe(read_location)
+        info = c.probe(str(read_location))
         opts = {
             "format": "mp4",
             "video": {
@@ -768,7 +809,7 @@ class Transcoder(metaclass=Singleton):
                 "samplerate": closest_rate,
                 "channels": info.audio.audio_channels,
             }
-        for _ in c.convert(read_location, write_location, opts, timeout=0):
+        for _ in c.convert(str(read_location), str(write_location), opts, timeout=0):
             pass
 
     def transcode_to_pdf(self, mediafiles, read_location: Path, write_location: Path):
