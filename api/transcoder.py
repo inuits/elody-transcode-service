@@ -748,10 +748,10 @@ class Transcoder(metaclass=Singleton):
                     )
                     app.logger.info(f"First conversion failed with: {ex}")
 
-    def transcode_to_mp3(self, read_location, write_location):
+    def transcode_to_mp3(self, read_location: Path, write_location: Path):
         try:
             subprocess.run(
-                ["ffmpeg", "-y", "-i", read_location, write_location],
+                ["ffmpeg", "-y", "-i", str(read_location), str(write_location)],
                 check=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
