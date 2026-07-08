@@ -719,10 +719,44 @@ class Transcoder(metaclass=Singleton):
             exif.pop(TiffImagePlugin.STRIPOFFSETS, None)
             artist, copyrights = self.__get_exif_for_mediafile(mediafile)
             self.__add_artist_and_copyright_to_exif(exif, artist, copyrights)
-            if src_img.mode in ("I;16", "I;16B"):
-                src_img = (
-                    src_img.convert("I").point(lambda i: i * (1 / 256)).convert("L")
-                )
+
+            if src_img.mode == "P" and src_img.format == "TIFF":
+                colormap = src_img.tag_v2.get(320)
+                if colormap and max(colormap) <= 255:
+                    app.logger.warning(
+                        "Detected malformed 8-bit TIFF ColorMap. Patching..."
+                    )
+                    num_colors = len(colormap) // 3
+                    fixed_palette = []
+                    for i in range(num_colors):
+                        r = colormap[i]
+                        g = colormap[i + num_colors]
+                        b = colormap[i + 2 * num_colors]
+                        fixed_palette.extend([r, g, b])
+                    src_img.putpalette(fixed_palette)
+
+            if src_img.mode in ("I", "F", "I;16", "I;16B"):
+                app.logger.warning(f"Normalizing high-depth mode: {src_img.mode}")
+                min_val, max_val = src_img.getextrema()
+                if max_val > min_val:
+                    scale = 255.0 / (max_val - min_val)
+                    src_img = src_img.point(lambda i: (i - min_val) * scale).convert(
+                        "L"
+                    )
+                else:
+                    src_img = src_img.convert("L")
+
+            if src_img.mode == "P":
+                if "transparency" in src_img.info:
+                    src_img = src_img.convert("RGBA")
+                else:
+                    src_img = src_img.convert("RGB")
+
+            if src_img.mode in ("RGBA", "LA"):
+                background = Image.new("RGB", src_img.size, (255, 255, 255))
+                background.paste(src_img, mask=src_img.split()[-1])
+                src_img = background
+
             ImageOps.exif_transpose(src_img, in_place=True)
 
             if resized_size := self.transcode_resize(src_img.size, MAX_DIMENSION):
