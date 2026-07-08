@@ -82,7 +82,7 @@ class Transcoder(metaclass=Singleton):
     def __add_mediafiles_to_zip(
         self,
         zipfile,
-        working_dir,
+        working_dir: Path,
         mediafile_ids,
         headers=None,
         user_email=None,
@@ -537,7 +537,7 @@ class Transcoder(metaclass=Singleton):
                 try:
                     self.__add_mediafiles_to_zip(
                         zip,
-                        temp_dir,
+                        temp_dir_path,
                         request_body.get("mediafiles", []),
                         headers,
                         user_email=user_email,
