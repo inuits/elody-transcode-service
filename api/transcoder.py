@@ -359,8 +359,13 @@ class Transcoder(metaclass=Singleton):
         url = f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
         headers = {**{"Accept": "text/uri-list"}, **headers}
         req = requests.post(url, json=mediafile, headers=headers)
-        req.raise_for_status()
-        return req.text.strip().replace('"', "") + f"&user_email={user_email}"
+        if req.status_code not in (200, 201):
+            raise Exception(req.text.strip())
+        upload_url = req.text.strip().replace('"', "")
+        parsed = urlparse(upload_url)
+        internal_base = self.storage_api_url.rstrip("/")
+        query = f"?{parsed.query}" if parsed.query else ""
+        return f"{internal_base}{parsed.path}{query}&user_email={user_email}"
 
     def __patch_mediafile(self, mediafile, payload, headers):
         req = requests.patch(
