@@ -486,7 +486,7 @@ class Transcoder(metaclass=Singleton):
         """Add zip to download entity and upload to S3
         Also deletes the zip from the filesystem
         """
-        app.logger.debug(f"Starting zip upload for {download_entity_id}.")
+        app.logger.info(f"Starting zip upload for {download_entity_id}.")
         with zip_location.open("rb") as zip:
             zip_upload_link = self.__get_zip_upload_link(
                 download_entity_id,
@@ -494,7 +494,7 @@ class Transcoder(metaclass=Singleton):
                 headers,
                 user_email=user_email,
             )
-            app.logger.debug(f"received zip_upload_link {zip_upload_link}\n\n")
+            app.logger.info(f"received zip_upload_link {zip_upload_link}\n\n")
             req = self.__make_upload_zip_request(zip_upload_link, zip)
             if req.status_code != 201:
                 app.logger.warning(
