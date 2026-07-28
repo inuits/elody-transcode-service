@@ -367,13 +367,10 @@ class Transcoder(metaclass=Singleton):
         if req.status_code not in (200, 201):
             raise Exception(req.text.strip())
         upload_url = req.text.strip().replace('"', "")
-        app.logger.info(f"'Raw' upload url: {upload_url}")
         parsed = urlparse(upload_url)
         parsed_path = parsed.path
-        parsed_path.replace("storage/v1", "")
-        app.logger.info(f"parsed_path after replace: {parsed_path}")
+        parsed_path = parsed_path.replace("/storage/v1", "")
         internal_base = self.storage_api_url.rstrip("/")
-        app.logger.info(f"{internal_base = }")
         query = f"?{parsed.query}" if parsed.query else ""
         return f"{internal_base}{parsed_path}{query}&user_email={user_email}"
 
