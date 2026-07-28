@@ -153,6 +153,8 @@ class Transcoder(metaclass=Singleton):
         headers: dict | None = None,
     ):
 
+        object_type_mapper = {"entities": "asset", "mediafiles": "mediafile"}
+
         if not object_ids:
             return None
         if headers is None:
@@ -166,6 +168,7 @@ class Transcoder(metaclass=Singleton):
                     "ids": object_ids,
                     "fields": fields,
                     "exclude_non_editable_fields": True,
+                    "type": object_type_mapper[object_type],
                 },
                 headers=self.__get_headers(
                     {
