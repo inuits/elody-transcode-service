@@ -163,12 +163,15 @@ class Transcoder(metaclass=Singleton):
         if self.csv_exporter_enabled:
             req = requests.post(
                 f"{self.csv_exporter_url}/{object_type}",
-                params={"order_by": "title", "limit": len(object_ids)},
+                params={
+                    "order_by": "title",
+                    "limit": len(object_ids),
+                    "type": object_type_mapper[object_type],
+                },
                 json={
                     "ids": object_ids,
                     "fields": fields,
                     "exclude_non_editable_fields": True,
-                    "type": object_type_mapper[object_type],
                 },
                 headers=self.__get_headers(
                     {
