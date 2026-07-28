@@ -368,9 +368,11 @@ class Transcoder(metaclass=Singleton):
             raise Exception(req.text.strip())
         upload_url = req.text.strip().replace('"', "")
         parsed = urlparse(upload_url)
+        parsed_path = parsed.path
+        parsed_path.replace("/storage/v1/", "")
         internal_base = self.storage_api_url.rstrip("/")
         query = f"?{parsed.query}" if parsed.query else ""
-        return f"{internal_base}{parsed.path}{query}&user_email={user_email}"
+        return f"{internal_base}{parsed_path}{query}&user_email={user_email}"
 
     def __patch_mediafile(self, mediafile, payload, headers):
         req = requests.patch(
