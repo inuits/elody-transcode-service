@@ -16,8 +16,10 @@ from zoneinfo import ZoneInfo
 import app
 import requests
 from converter import Converter
+from elody.exceptions import NotFoundException
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
 from requests.exceptions import ChunkedEncodingError, ConnectionError
+from retry import retry
 from urllib3.exceptions import IncompleteRead, ProtocolError
 
 Image.MAX_IMAGE_PIXELS = None
@@ -463,6 +465,14 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 201:
             raise Exception(req.text.strip())
 
+    @retry((NotFoundException), tries=3, delay=2)
+    def __make_upload_zip_request(self, zip_upload_link, zip):
+
+        req = requests.post(zip_upload_link, data=zip)
+        if req.status_code == 404:
+            raise NotFoundException
+        return req
+
     def __upload_zip_to_download_entity(
         self,
         download_entity_id,
@@ -481,7 +491,8 @@ class Transcoder(metaclass=Singleton):
                 headers,
                 user_email=user_email,
             )
-            req = requests.post(zip_upload_link, data=zip)
+            app.logger.debug(f"received zip_upload_link {zip_upload_link}\n\n")
+            req = self.__make_upload_zip_request(zip_upload_link, zip)
             if req.status_code != 201:
                 app.logger.warning(
                     f"Failed to upload zip to download entity, status code: {req.status_code}",
