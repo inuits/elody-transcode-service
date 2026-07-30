@@ -546,6 +546,7 @@ class Transcoder(metaclass=Singleton):
                 "In Progress",
                 headers,
             )
+        basic_csv = bool(request_body.get("basic_csv"))
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_dir_path = Path(temp_dir)
             datetime_string = datetime.now(ZoneInfo("Europe/Brussels")).strftime(
@@ -599,25 +600,26 @@ class Transcoder(metaclass=Singleton):
                         ),
                     ),
                 }
-                try:
-                    for object_type, csv_fields_definition_field in {
-                        "entities": "csv_entity_columns",
-                        "mediafiles": "csv_mediafile_columns",
-                    }.items():
-                        self.__add_objects_csv_to_zip(
-                            zip,
-                            temp_dir_path,
-                            object_ids.get(object_type),
-                            object_type,
-                            request_body.get(csv_fields_definition_field, []),
-                            headers,
+                if basic_csv:
+                    try:
+                        for object_type, csv_fields_definition_field in {
+                            "entities": "csv_entity_columns",
+                            "mediafiles": "csv_mediafile_columns",
+                        }.items():
+                            self.__add_objects_csv_to_zip(
+                                zip,
+                                temp_dir_path,
+                                object_ids.get(object_type),
+                                object_type,
+                                request_body.get(csv_fields_definition_field, []),
+                                headers,
+                            )
+                        app.logger.debug(f"Added csvs for {download_entity_id}.")
+                    except:
+                        self.__set_download_entity_progress(
+                            download_entity_id, "Failed", headers
                         )
-                    app.logger.debug(f"Added csvs for {download_entity_id}.")
-                except:
-                    self.__set_download_entity_progress(
-                        download_entity_id, "Failed", headers
-                    )
-                    raise
+                        raise
             if download_entity_id:
                 try:
                     self.__upload_zip_to_download_entity(
