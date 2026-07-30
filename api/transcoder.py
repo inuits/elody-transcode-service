@@ -1,4 +1,5 @@
 import os
+import posixpath
 import re
 import shutil
 import subprocess
@@ -7,8 +8,8 @@ import time
 from datetime import datetime
 from math import floor, sqrt
 from pathlib import Path
-from typing import cast
-from urllib.parse import parse_qs, urlparse
+from typing import Literal, cast
+from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 from uuid import uuid4
 from zipfile import ZipFile
 from zoneinfo import ZoneInfo
@@ -17,6 +18,7 @@ import app
 import requests
 from converter import Converter
 from elody.exceptions import NotFoundException
+from elody_types import MediafileEntity
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
 from requests.exceptions import ChunkedEncodingError, ConnectionError
 from retry import retry
@@ -47,7 +49,9 @@ class Transcoder(metaclass=Singleton):
             "Authorization": f"Bearer {os.getenv('STATIC_JWT')}",
             "X-From-Service": "transcode-service",
         }
-        self.storage_api_url = os.getenv("STORAGE_API_URL")
+        self.storage_api_url: str = os.getenv(
+            "STORAGE_API_URL", "http://storage-api:5000/"
+        )
         self.zip_working_dir = os.getenv("ZIP_WORKING_DIR", "/app")
 
     def __add_artist_and_copyright_to_exif(self, exif, artist, copyrights):
@@ -322,7 +326,7 @@ class Transcoder(metaclass=Singleton):
                 return entry["value"]
         return None
 
-    def __get_mediafile(self, mediafile_id, headers=None):
+    def __get_mediafile(self, mediafile_id, headers=None) -> MediafileEntity:
         mediafiles_url = f"{self.collection_api_url}/mediafiles/{mediafile_id}"
         req = requests.get(
             mediafiles_url,
@@ -337,14 +341,35 @@ class Transcoder(metaclass=Singleton):
         return req.json()
 
     def __get_mediafile_download_link(self, mediafile, headers=None, user_email=None):
-        mediafile = self.__get_mediafile(self.__get_raw_id(mediafile))
-        app.logger.debug(
-            f"Mediafile {self.__get_raw_id(mediafile)} raw location: {mediafile.get('original_file_location')}"
-        )
-        parsed_uri = urlparse(mediafile.get("original_file_location"))
 
-        user_email_parameter = f"&user_email={user_email}" if user_email else ""
-        return f"{self.storage_api_url}{parsed_uri.path.replace('/storage/v1', '')}?{parsed_uri.query}{user_email_parameter}"  # ty:ignore[unresolved-attribute]
+        mediafile_id = self.__get_raw_id(mediafile)
+
+        mediafile = self.__get_mediafile(mediafile_id)
+        app.logger.debug(
+            f"Mediafile {mediafile_id} raw location: {mediafile.get('original_file_location')}"
+        )
+        external_download_url = mediafile.get("original_file_location")
+        parsed_uri = urlparse(external_download_url)
+        parsed_internal = urlparse(self.storage_api_url)
+        tail_path = parsed_uri.path.removeprefix("/storage/v1").lstrip("/")
+        new_path = posixpath.join(parsed_internal.path, tail_path)
+        query_params = parse_qsl(parsed_uri.query)
+        if user_email:
+            query_params.append(("user_email", user_email))
+        new_query = urlencode(query_params)
+
+        internal_url = urlunparse(
+            (
+                parsed_internal.scheme,
+                parsed_internal.netloc,
+                new_path,  # generally should be  /download-with-ticket/<filename> if using internal urls, or /storage/v1 if using external
+                parsed_uri.params,  # generally we don't support params, but I think it's in theory used for cantaloupe when requesting a specific frame?
+                new_query,  # ticket_id=...&user_email=...
+                parsed_uri.fragment,
+            )
+        )
+
+        return internal_url
 
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
