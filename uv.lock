@@ -301,7 +301,11 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "types-decorator" },
+    { name = "types-pika" },
+    { name = "types-pillow" },
     { name = "types-requests" },
+    { name = "types-retry" },
 ]
 
 [package.metadata]
@@ -346,7 +350,13 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "types-requests", specifier = "==2.33.0.20260712" }]
+dev = [
+    { name = "types-decorator", specifier = "==5.2.0.20260712" },
+    { name = "types-pika", specifier = "==1.2.0b1" },
+    { name = "types-pillow", specifier = "==10.2.0.20240822" },
+    { name = "types-requests", specifier = "==2.33.0.20260712" },
+    { name = "types-retry", specifier = "==0.9.9.20260408" },
+]
 
 [[package]]
 name = "flask"
@@ -737,6 +747,33 @@ wheels = [
 ]
 
 [[package]]
+name = "types-decorator"
+version = "5.2.0.20260712"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/49/68/88a93a27141b50285e10dfe5fecebc1b1a6aec87dea66d9204435f84a76b/types_decorator-5.2.0.20260712.tar.gz", hash = "sha256:2890f05fe3c65546baf5000fd5f1eed4d1c95bae5516e23e1735b7b5a4dd98c6", size = 9374, upload-time = "2026-07-12T05:14:02.186Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/53/78/e66eac8df9960f60e3fd36802b472e47109450b5db540b998af32fc29553/types_decorator-5.2.0.20260712-py3-none-any.whl", hash = "sha256:5b572bb7acf6935cf888c6b058458df970ae80fb74ab4a8ada8c786491b3dead", size = 8186, upload-time = "2026-07-12T05:14:01.271Z" },
+]
+
+[[package]]
+name = "types-pika"
+version = "1.2.0b1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/51/25/c23753b27713224afe48071b750f2ced8eae4402be2556a4d7509e059e2b/types-pika-1.2.0b1.tar.gz", hash = "sha256:338f56ced7cfe17bce5237764fb5561fb209be2ef7eb32712f58608f55b1dc5b", size = 16951, upload-time = "2022-01-18T13:15:08.223Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/93/cd/bc18f1430defc72cf1fb144645721ee2161f5d9a9f5884db465e699b37f0/types_pika-1.2.0b1-py3-none-any.whl", hash = "sha256:d5522f5b17dbaf747e1a0e49dd0024c1656a5ffda890996daa40b43f824667bc", size = 24199, upload-time = "2022-01-18T13:15:07.103Z" },
+]
+
+[[package]]
+name = "types-pillow"
+version = "10.2.0.20240822"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/4a/4495264dddaa600d65d68bcedb64dcccf9d9da61adff51f7d2ffd8e4c9ce/types-Pillow-10.2.0.20240822.tar.gz", hash = "sha256:559fb52a2ef991c326e4a0d20accb3bb63a7ba8d40eb493e0ecb0310ba52f0d3", size = 35389, upload-time = "2024-08-22T02:32:48.15Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/66/23/e81a5354859831fcf54d488d33b80ba6133ea84f874a9c0ec40a4881e133/types_Pillow-10.2.0.20240822-py3-none-any.whl", hash = "sha256:d9dab025aba07aeb12fd50a6799d4eac52a9603488eca09d7662543983f16c5d", size = 54354, upload-time = "2024-08-22T02:32:46.664Z" },
+]
+
+[[package]]
 name = "types-requests"
 version = "2.33.0.20260712"
 source = { registry = "https://pypi.org/simple" }
@@ -746,6 +783,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/db/51/703318f7b7be8bee126ec13bf615050f932d0179b8784420f3a0199cc769/types_requests-2.33.0.20260712.tar.gz", hash = "sha256:2141b67ab534a5c5cd2dac5034f2a35f42e699c5bf185eee608c5246a069d7fb", size = 25084, upload-time = "2026-07-12T05:14:20.455Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/62/e7/010c87f559e216d83f9dc51e939633fd0d0ead3377340181ab0e223cd3b5/types_requests-2.33.0.20260712-py3-none-any.whl", hash = "sha256:de027e28c171d3da529689cbfa023b0b4eab188c8dfa22fd834eebd2cee6e7bb", size = 21392, upload-time = "2026-07-12T05:14:19.616Z" },
+]
+
+[[package]]
+name = "types-retry"
+version = "0.9.9.20260408"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b4/e9/0e448a0475f86fb36c68a7ca35c6d2ea06b7f599d763514328fe34913eba/types_retry-0.9.9.20260408.tar.gz", hash = "sha256:3f98fa62ec027449383f5c019cceacc784c1dbab4760989ddab421f7b8407d92", size = 7778, upload-time = "2026-04-08T04:32:27.274Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ca/f5/d6d49f1e99ae6e40fb6a9861e6cb78018cfbeff546fd5e5ab2a3719f3fe1/types_retry-0.9.9.20260408-py3-none-any.whl", hash = "sha256:f1d0677e03235fa04b66332d4ec004211dbf85b08b863e19b7dfcbf604622c50", size = 7618, upload-time = "2026-04-08T04:32:26.482Z" },
 ]
 
 [[package]]
