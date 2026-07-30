@@ -22,6 +22,11 @@ from elody_types import MediafileEntity
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
 from requests.exceptions import ChunkedEncodingError, ConnectionError
 from retry import retry
+from transcoder_exceptions import (
+    FileDownloadRetryExhausted,
+    GetWidthHeightException,
+    UnsupportedOperationException,
+)
 from urllib3.exceptions import IncompleteRead, ProtocolError
 
 Image.MAX_IMAGE_PIXELS = None
@@ -39,7 +44,7 @@ class Singleton(type):
 class Transcoder(metaclass=Singleton):
     def __init__(self):
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
-        self.csv_exporter_enabled = os.getenv("CSV_EXPORTER_ENABLED", False) in {
+        self.csv_exporter_enabled = os.getenv("CSV_EXPORTER_ENABLED", "false") in {
             "true",
             "True",
             1,
@@ -179,7 +184,8 @@ class Transcoder(metaclass=Singleton):
                 },
                 headers=self.__get_headers(
                     {
-                        **{"Accept": "text/csv", "Content-Type": "application/json"},
+                        "Accept": "text/csv",
+                        "Content-Type": "application/json",
                         **headers,
                     }
                 ),
@@ -192,7 +198,7 @@ class Transcoder(metaclass=Singleton):
                     "field[]": fields,
                     "exclude_non_editable_fields": True,
                 },
-                headers=self.__get_headers({**{"Accept": "text/csv"}, **headers}),
+                headers=self.__get_headers({"Accept": "text/csv", **headers}),
             )
         if req.status_code != 200:
             app.logger.info(
@@ -207,10 +213,7 @@ class Transcoder(metaclass=Singleton):
             entity_url,
             headers=self.__get_headers(headers),
         )
-        if req.status_code != 200:
-            raise Exception(
-                f"Could not get entity  from {entity_url}\n" + req.text.strip(),
-            )
+        req.raise_for_status()
         return req.json()
 
     # TODO: We should move this to the elody-sdk  # noqa: FIX002
@@ -244,11 +247,7 @@ class Transcoder(metaclass=Singleton):
                 params=params,
                 headers=self.__get_headers(headers),
             )
-            if req.status_code != 200:
-                raise Exception(
-                    f"Could not get entity mediafiles from {entity_mediafiles_url}\n"
-                    + req.text.strip(),
-                )
+            req.raise_for_status()
             partial_response = req.json()
             if not partial_response.get("next"):
                 stop = True
@@ -286,9 +285,7 @@ class Transcoder(metaclass=Singleton):
 
                 with requests.get(url, headers=req_headers, stream=True) as req:
                     if req.status_code not in (200, 206):
-                        raise Exception(
-                            f"Could not get file from {url}\nStatus: {req.status_code}\n{req.text.strip()}"
-                        )
+                        req.raise_for_status()
 
                     if req.status_code == 200 and current_bytes > 0:
                         output.seek(0)
@@ -306,8 +303,8 @@ class Transcoder(metaclass=Singleton):
             ) as e:
                 retries += 1
                 if retries > max_retries:
-                    raise Exception(
-                        f"Failed to fully download {url} after {max_retries} retries. Last error: {e}"
+                    raise FileDownloadRetryExhausted(
+                        url=url, retries=max_retries, exception=e
                     ) from e
 
                 time.sleep(2**retries)
@@ -332,11 +329,6 @@ class Transcoder(metaclass=Singleton):
             mediafiles_url,
             headers=self.__get_headers(headers),
         )
-        if req.status_code != 200:
-            raise Exception(
-                f"Could not get mediafile details from {mediafiles_url}\n"
-                + req.text.strip(),
-            )
         req.raise_for_status()
         return req.json()
 
@@ -390,10 +382,10 @@ class Transcoder(metaclass=Singleton):
             "relation_properties": {"is_downloadset": True},
         }
         url = f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
-        headers = {**{"Accept": "text/uri-list"}, **headers}
+        headers = {"Accept": "text/uri-list", **headers}
         req = requests.post(url, json=mediafile, headers=headers)
         if req.status_code not in (200, 201):
-            raise Exception(req.text.strip())
+            req.raise_for_status()
         upload_url = req.text.strip().replace('"', "")
         parsed = urlparse(upload_url)
         parsed_path = parsed.path
@@ -409,7 +401,7 @@ class Transcoder(metaclass=Singleton):
             headers=self.__get_headers(headers),
         )
         if req.status_code not in (200, 201, 204):
-            raise Exception(req.text.strip())
+            req.raise_for_status()
 
     def __set_download_entity_progress(
         self,
@@ -446,7 +438,7 @@ class Transcoder(metaclass=Singleton):
             headers={"Accept": "text/uri-list", **self.__get_headers(headers)},
         )
         if req.status_code != 201:
-            raise Exception(req.text.strip())
+            req.raise_for_status()
         upload_link = req.text.strip()
         if master_entity_id:
             mediafile_id = parse_qs(urlparse(upload_link).query).get("id", [])[0]
@@ -460,14 +452,14 @@ class Transcoder(metaclass=Singleton):
                     f"{self.collection_api_url}/mediafiles/{mediafile_id}",
                     headers=self.__get_headers(headers),
                 )
-                raise Exception(req.text.strip())
+                req.raise_for_status()
         req = requests.post(
             upload_link,
             data=file_bytes,
             headers=self.__get_headers(headers),
         )
         if req.status_code != 201:
-            raise Exception(req.text.strip())
+            req.raise_for_status()
 
     def __upload_transcode(
         self,
@@ -484,7 +476,7 @@ class Transcoder(metaclass=Singleton):
             headers=self.__get_headers(headers),
         )
         if req.status_code != 201:
-            raise Exception(req.text.strip())
+            req.raise_for_status()
         ticket_id = req.text.strip().replace('"', "")
         storage_url = f"{self.storage_api_url}/upload/transcode?id={self.__get_raw_id(mediafile)}&ticket_id={ticket_id}&ignore_duplicate_check={ignore_duplicate_check}"
         if parent_job_id:
@@ -496,7 +488,7 @@ class Transcoder(metaclass=Singleton):
             headers=self.__get_headers(headers),
         )
         if req.status_code != 201:
-            raise Exception(req.text.strip())
+            req.raise_for_status()
 
     @retry((NotFoundException), tries=3, delay=2)
     def __make_upload_zip_request(self, zip_upload_link, zip):
@@ -544,7 +536,7 @@ class Transcoder(metaclass=Singleton):
                 "img_height": info.video.video_height,
             }
         if not data["img_width"] or not data["img_height"]:
-            raise Exception("Could not get width and/or height")
+            raise GetWidthHeightException
         self.__patch_mediafile(mediafile, data, headers)
 
     def create_zip(self, request_body, headers=None, user_email=None):
@@ -674,7 +666,7 @@ class Transcoder(metaclass=Singleton):
                 },
             }.get(operation_name)
             if not operation:
-                raise Exception(f"Operation {operation_name} not supported")
+                raise UnsupportedOperationException(operation_name)
             with read_location.open("wb") as input_file:
                 app.logger.info("Starting download of file")
                 self.__get_file(
@@ -717,7 +709,7 @@ class Transcoder(metaclass=Singleton):
                 },
             }.get(operation_name)
             if not operation:
-                raise Exception(f"Operation {operation_name} not supported")
+                raise UnsupportedOperationException(operation_name)
             for mediafile in mediafiles:
                 read_location = temp_dir_path / cast(str, mediafile["filename"])
                 with read_location.open("wb") as input_file:
@@ -740,7 +732,9 @@ class Transcoder(metaclass=Singleton):
                         master_entity_id,
                     )
 
-    def transcode_resize(self, src_imag_size: tuple, max_size: int) -> bool | tuple:
+    def transcode_resize(
+        self, src_imag_size: tuple, max_size: int
+    ) -> Literal[False] | tuple:
         """
         If the transcode has a total pixels <= max_size**2 it is fine, and we should not resize
         Otherwise, to get to max pixels we need to multiply total_pixels * max_pixels/total_pixels
