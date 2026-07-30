@@ -68,3 +68,8 @@ ignore = [
 
 [tool.uv.sources]
 video-converter = { git = "https://github.com/UbiCastTeam/python-video-converter.git" }
+
+[dependency-groups]
+dev = [
+    "types-requests==2.33.0.20260712",
+]
