@@ -65,16 +65,6 @@ class MP4Transcode(BaseTranscode):
         return super().post("mp4", ["video/"], "Successfully transcoded {} to mp4")
 
 
-# class WidthHeightTranscode(BaseTranscode):
-#     @authenticate(RequestContext(request))
-#     def post(self):
-#         return super().post(
-#             "width_height",
-#             ["image/", "video/"],
-#             "Successfully added {} width & height",
-#         )
-
-
 class PDFTranscode(BaseTranscode):
     @authenticate(RequestContext(request))
     def post(self):
