@@ -344,7 +344,7 @@ class Transcoder(metaclass=Singleton):
         parsed_uri = urlparse(mediafile.get("original_file_location"))
 
         user_email_parameter = f"&user_email={user_email}" if user_email else ""
-        return f"{self.storage_api_url.replace('/storage/v1', '')}{parsed_uri.path}?{parsed_uri.query}{user_email_parameter}"  # ty:ignore[unresolved-attribute]
+        return f"{self.storage_api_url}{parsed_uri.path.replace('/storage/v1', '')}?{parsed_uri.query}{user_email_parameter}"  # ty:ignore[unresolved-attribute]
 
     def __get_raw_id(self, item):
         return item.get("_key", item["_id"])
