@@ -26,7 +26,7 @@ def init_policy_factory():
     )
     _policy_factory.register_authorization_policy(
         "transcode-service",
-        None,  # pyright: ignore
+        None,  # pyright: ignore #ty: ignore[invalid-argument-type]
     )
     _policy_factory.set_fallback_key_for_policy_mapping("transcode-service")
 

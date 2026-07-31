@@ -21,3 +21,5 @@ class ElodyEntity(TypedDict):
 
 class MediafileEntity(ElodyEntity):
     original_file_location: str
+    original_filename: str
+    filename: str

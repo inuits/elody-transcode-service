@@ -20,6 +20,7 @@ from converter import Converter
 from elody.exceptions import NotFoundException
 from elody_types import MediafileEntity
 from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
+from PIL.TiffImagePlugin import TiffImageFile
 from requests.exceptions import ChunkedEncodingError, ConnectionError
 from retry import retry
 from transcoder_exceptions import (
@@ -638,17 +639,17 @@ class Transcoder(metaclass=Singleton):
 
     def transcode(
         self,
-        mediafile,
-        operation_name,
-        headers=None,
-        parent_job_id=None,
-        user_email=None,
-        ignore_duplicate_check=False,
+        mediafile: MediafileEntity,
+        operation_name: str,
+        headers: dict | None = None,
+        parent_job_id: str | None = None,
+        user_email: str | None = None,
+        ignore_duplicate_check: bool = False,
     ):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_dir_path = Path(temp_dir)
             original_filename_as_path = Path(mediafile["original_filename"])
-            read_location = temp_dir_path / cast(str, mediafile["filename"])
+            read_location = temp_dir_path / mediafile["filename"]
             write_location = (
                 temp_dir_path
                 / f"{original_filename_as_path.parent / original_filename_as_path.stem}.{operation_name}"
@@ -681,7 +682,7 @@ class Transcoder(metaclass=Singleton):
                     headers,
                 )
                 app.logger.info("Finished download of file")
-            operation["func"](*operation["args"])  # ty:ignore[call-non-callable, not-iterable]
+            operation["func"](*operation["args"])  # ty: ignore[call-non-callable, invalid-argument-type, not-iterable]
             if operation.get("upload", True):
                 with write_location.open("rb") as output_file:
                     self.__upload_transcode(
@@ -766,7 +767,7 @@ class Transcoder(metaclass=Singleton):
             self.__add_artist_and_copyright_to_exif(exif, artist, copyrights)
 
             if src_img.mode == "P" and src_img.format == "TIFF":
-                colormap = src_img.tag_v2.get(320)
+                colormap = cast(TiffImageFile, src_img).tag_v2.get(320)
                 if colormap and max(colormap) <= 255:
                     app.logger.warning(
                         "Detected malformed 8-bit TIFF ColorMap. Patching..."
