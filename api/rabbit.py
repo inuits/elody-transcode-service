@@ -15,27 +15,24 @@ logger = logging.getLogger(__name__)
 def init_rabbit(app):
     global _rabbit
     amqp_module = import_module(getenv("AMQP_MANAGER", "amqpstorm_flask"))
-    auto_delete_exchange = getenv("AUTO_DELETE_EXCHANGE", False) in [
+    auto_delete_exchange = getenv("AUTO_DELETE_EXCHANGE", "False") in {
         1,
         "1",
-        True,
         "True",
         "true",
-    ]
-    durable_exchange = getenv("DURABLE_EXCHANGE", True) in [
+    }
+    durable_exchange = getenv("DURABLE_EXCHANGE", "True") in {
         1,
         "1",
-        True,
         "True",
         "true",
-    ]
-    passive_exchange = getenv("PASSIVE_EXCHANGE", False) in [
+    }
+    passive_exchange = getenv("PASSIVE_EXCHANGE", "False") in {
         1,
         "1",
-        True,
         "True",
         "true",
-    ]
+    }
 
     ExchangeParams = (
         amqp_module.ExchangeParams
@@ -63,5 +60,5 @@ def init_rabbit(app):
 
 
 def get_rabbit() -> Any:
-    global _rabbit
+    global _rabbit  # noqa: PLW0602
     return _rabbit

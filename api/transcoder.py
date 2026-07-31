@@ -216,7 +216,7 @@ class Transcoder(metaclass=Singleton):
         req.raise_for_status()
         return req.json()
 
-    # TODO: We should move this to the elody-sdk  # noqa: FIX002
+    # TODO: We should move this to the elody-sdk  # ruff: ignore[FIX002]
     @staticmethod
     def __parse_filename_unfriendly_string(
         input: str | None,
@@ -631,7 +631,7 @@ class Transcoder(metaclass=Singleton):
                     self.__set_download_entity_progress(
                         download_entity_id, "Finished", headers
                     )
-                except Exception:
+                except Exception:  # noqa: BLE001
                     self.__set_download_entity_progress(
                         download_entity_id, "Failed", headers
                     )
@@ -815,7 +815,7 @@ class Transcoder(metaclass=Singleton):
                         progressive=True,
                         exif=exif,
                     )
-                except Exception as ex:
+                except Exception as ex:  # noqa: BLE001
                     exif.clear()
                     self.__add_artist_and_copyright_to_exif(exif, artist, copyrights)
                     dst_img.save(

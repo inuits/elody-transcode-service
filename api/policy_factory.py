@@ -32,17 +32,14 @@ def init_policy_factory():
 
 
 def authenticate(request_context: RequestContext):
-    global _policy_factory
+    global _policy_factory  # noqa: PLW0602
     return _policy_factory.authenticate(request_context)
 
 
 def get_user_context() -> UserContext:
-    try:
-        user_context = g.get("user_context")
-        if not user_context:
-            raise NoUserContextException()
-    except Exception as exception:
-        raise exception
+    user_context = g.get("user_context")
+    if not user_context:
+        raise NoUserContextException()
 
     return user_context
 

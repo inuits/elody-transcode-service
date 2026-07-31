@@ -7,11 +7,9 @@ from flask_restful import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from healthcheck import HealthCheck
 from policy_factory import init_policy_factory
-
-# from rabbitmq_pika_flask import RabbitMQ
 from rabbit import get_rabbit, init_rabbit
 
-if os.getenv("GLITCH_TIP_ENABLED", False) in ["True", "true", True]:
+if os.getenv("GLITCH_TIP_ENABLED", "False") in {"True", "true", True}:
     import sentry_sdk
     from sentry_sdk.integrations.flask import FlaskIntegration
 
@@ -50,14 +48,14 @@ def rabbit_available():
 
 
 health = HealthCheck()
-if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", True) in ["True", "true", True]:
+if os.getenv("HEALTH_CHECK_EXTERNAL_SERVICES", "True") in {"True", "true", True}:
     health.add_check(rabbit_available)
 app.add_url_rule("/health", "healthcheck", view_func=lambda: health.run())
 
 init_policy_factory()
 
-from resources.spec import AsyncAPISpec, OpenAPISpec
-from resources.transcode import (
+from resources.spec import AsyncAPISpec, OpenAPISpec  # noqa: E402
+from resources.transcode import (  # noqa: E402
     JpegTranscode,
     MP3Transcode,
     MP4Transcode,
@@ -72,7 +70,6 @@ api.add_resource(JpegTranscode, "/transcode/jpeg")
 api.add_resource(MP3Transcode, "/transcode/mp3")
 api.add_resource(MP4Transcode, "/transcode/mp4")
 api.add_resource(PDFTranscode, "/transcode/pdf")
-# api.add_resource(WidthHeightTranscode, "/transcode/widthheight")
 api.add_resource(ZipTranscode, "/transcode/zip")
 
 if __name__ == "__main__":

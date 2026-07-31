@@ -18,15 +18,13 @@ def __is_malformed_message(data, fields, mimetypes):
     if not all(x in data for x in fields):
         app.logger.error(f"Message malformed: missing one of {fields}")
         return True
-    if not any(x in data["mediafile"]["mimetype"] for x in mimetypes):
-        return True
-    return False
+    return bool(not any(x in data["mediafile"]["mimetype"] for x in mimetypes))
 
 
 queue_prefix = getenv("QUEUE_PREFIX", "basic")
 global_queue_type = getenv("QUEUE_TYPE", "classic")
 routing_key_prefix = getenv("ROUTING_KEY_PREFIX", "dams")
-delivery_limit = getenv("DELIVERY_LIMIT", 4)
+delivery_limit = int(getenv("DELIVERY_LIMIT", "4"))
 
 
 def __argument_wrapper(
@@ -58,14 +56,11 @@ def __filesize_warning(filesize: str) -> bool:
             filesize_part.strip() for filesize_part in filesize.lower().split()
         ]
         size_bytes = float(number) * units[unit]
-    except Exception:
+    except Exception:  # noqa: BLE001
         # This means something went wrong with the filesize calculations
         return False
 
-    if size_bytes > 1 * units["gb"]:
-        return True
-
-    return False
+    return size_bytes > 1 * units["gb"]
 
 
 def __do_transcode(
@@ -157,7 +152,7 @@ def create_zip(message: Message):
     try:
         Transcoder().create_zip(data, data["auth_headers"], user_email=user_email)
         message.ack()
-    except Exception as ex:
+    except Exception as ex:  # noqa: BLE001
         app.logger.error(f"Could not create ZIP-file {ex}")
         app.logger.exception(ex, stack_info=True)
         message.nack()

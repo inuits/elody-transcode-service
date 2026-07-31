@@ -42,7 +42,7 @@ class BaseTranscode(Resource):
                 self._get_auth_headers(),
                 user_email=user_email,
             )
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             return str(ex), 400
         return message.format(content["mediafile"]["filename"]), 201
 
@@ -79,7 +79,7 @@ class PDFTranscode(BaseTranscode):
                 master_entity_id,
                 user_email=user_email,
             )
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             return str(ex), 400
         return (
             f"Successfully generated PDF from {len(content['mediafiles'])} images",
