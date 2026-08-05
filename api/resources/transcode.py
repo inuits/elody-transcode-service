@@ -1,7 +1,7 @@
 import os
 
-from cloudevents.conversion import to_dict
-from cloudevents.http import CloudEvent
+from cloudevents.v1.conversion import to_dict
+from cloudevents.v1.http import CloudEvent
 from flask import request
 from flask_restful import Resource, abort
 from inuits_policy_based_auth import RequestContext
