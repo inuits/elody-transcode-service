@@ -11,6 +11,7 @@ from elody.job import (
     start_job,
 )
 from rabbit import get_rabbit
+from storage.http_storage_service import HttpStorageService
 from transcoders import Transcoder
 
 
@@ -88,6 +89,11 @@ def __do_transcode(
         user_email=data.get("user_email", "developers@inuits.eu"),
         parent_id=parent_job_id,
     )
+    storage_service = HttpStorageService(
+        getenv("STORAGE_API_URL", "http://storage-api:5000/"),
+        getenv("COLLECTION_API_URL", ""),
+        logger=app.logger,
+    )
     try:
         filesize = data["mediafile"].get("filesize", "unknown")
         app.logger.info(
@@ -99,7 +105,8 @@ def __do_transcode(
             )
         start_job(job_id, get_rabbit=get_rabbit)
         if "headers" in data:
-            Transcoder().transcode(
+            transcoder = Transcoder.get_transcoder(operation, storage_service)
+            transcoder.transcode(
                 data["mediafile"],
                 operation,
                 data.get("headers"),
@@ -107,7 +114,8 @@ def __do_transcode(
                 ignore_duplicate_check=ignore_duplicates,
             )
         else:
-            Transcoder().transcode(
+            transcoder = Transcoder.get_transcoder(operation, storage_service)
+            transcoder.transcode(
                 data["mediafile"],
                 operation,
                 parent_job_id=parent_job_id,
@@ -150,12 +158,18 @@ def create_zip(message: Message):
     data = body["data"]
     user_email = data.pop("user_email", None)
     try:
-        Transcoder().create_zip(data, data["auth_headers"], user_email=user_email)
+        Transcoder(
+            storage_service=HttpStorageService(
+                getenv("STORAGE_API_URL", "http://storage-api:5000/"),
+                getenv("COLLECTION_API_URL", ""),
+                logger=app.logger,
+            )
+        ).create_zip(data, data["auth_headers"], user_email=user_email)
         message.ack()
     except Exception as ex:  # noqa: BLE001
         app.logger.error(f"Could not create ZIP-file {ex}")
         app.logger.exception(ex, stack_info=True)
-        message.nack()
+        message.nack(requeue=True)
 
 
 @get_rabbit().queue(
@@ -174,7 +188,7 @@ def transcode_to_jpeg(message: Message):
 
     body = message.json()
     try:
-        __do_transcode(body, "jpg", ["image/"], "Transcoding {} to jpeg failed with:")
+        __do_transcode(body, "jpeg", ["image/"], "Transcoding {} to jpeg failed with:")
         message.ack()
     except:
         message.nack(requeue=True)
