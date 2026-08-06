@@ -1,6 +1,6 @@
 ARG UV_IMAGE_PREFIX=ghcr.io
 
-FROM ${UV_IMAGE_PREFIX}/astral-sh/uv:0.11.16 as uv_binary
+FROM ${UV_IMAGE_PREFIX}/astral-sh/uv:0.12.1 as uv_binary
 
 ### Base stage
 FROM python:3.13-alpine AS base-stage
