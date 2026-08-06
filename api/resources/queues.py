@@ -11,7 +11,7 @@ from elody.job import (
     start_job,
 )
 from rabbit import get_rabbit
-from transcoder import Transcoder
+from transcoders import Transcoder
 
 
 def __is_malformed_message(data, fields, mimetypes):

@@ -7,7 +7,7 @@ from flask_restful import Resource, abort
 from inuits_policy_based_auth import RequestContext
 from policy_factory import authenticate, get_user_context
 from rabbit import get_rabbit
-from transcoder import Transcoder
+from transcoders import Transcoder
 
 ROUTING_KEY_PREFIX = os.getenv("ROUTING_KEY_PREFIX", "dams")
 

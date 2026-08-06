@@ -1,14 +1,11 @@
 import os
 import posixpath
-import re
 import shutil
-import subprocess
 import tempfile
 import time
 from datetime import datetime
-from math import floor, sqrt
 from pathlib import Path
-from typing import Literal, cast
+from typing import cast
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 from uuid import uuid4
 from zipfile import ZipFile
@@ -18,16 +15,22 @@ import app
 import requests
 from converter import Converter
 from elody.exceptions import NotFoundException
+from elody.util import (
+    get_boolean_env,
+    get_item_metadata_value,
+    get_raw_id,
+    parse_filename_unfriendly_string,
+)
 from elody_types import MediafileEntity
-from PIL import ExifTags, Image, ImageOps, TiffImagePlugin
-from PIL.TiffImagePlugin import TiffImageFile
-from requests.exceptions import ChunkedEncodingError, ConnectionError
-from retry import retry
-from transcoder_exceptions import (
+from exceptions_transcoder import (
     FileDownloadRetryExhausted,
     GetWidthHeightException,
     UnsupportedOperationException,
 )
+from PIL import ExifTags, Image
+from requests.exceptions import ChunkedEncodingError, ConnectionError
+from retry import retry
+from storage.base_storage import StorageService
 from urllib3.exceptions import IncompleteRead, ProtocolError
 
 Image.MAX_IMAGE_PIXELS = None
@@ -43,13 +46,23 @@ class Singleton(type):
 
 
 class Transcoder(metaclass=Singleton):
-    def __init__(self):
+    _registry = {}
+
+    def __init_subclass__(cls, format_name, **kwargs):
+        super().__init_subclass__(**kwargs)
+        Transcoder._registry[format_name] = cls
+
+    @classmethod
+    def get_transcoder(cls, format_name: str, storage_service: StorageService):
+        transcoder_class = cls._registry.get(format_name)
+        if not transcoder_class:
+            raise ValueError(f"No transcoder registered for format: {format_name}")
+        return transcoder_class(storage_service)
+
+    def __init__(self, storage_service: StorageService):
+        self.storage = storage_service
         self.collection_api_url = os.getenv("COLLECTION_API_URL")
-        self.csv_exporter_enabled = os.getenv("CSV_EXPORTER_ENABLED", "false") in {
-            "true",
-            "True",
-            1,
-        }
+        self.csv_exporter_enabled = get_boolean_env("CSV_EXPORTER_ENABLED", False)
         self.csv_exporter_url = os.getenv("CSV_EXPORTER_URL", None)
         self.headers = {
             "Authorization": f"Bearer {os.getenv('STATIC_JWT')}",
@@ -60,7 +73,7 @@ class Transcoder(metaclass=Singleton):
         )
         self.zip_working_dir = os.getenv("ZIP_WORKING_DIR", "/app")
 
-    def __add_artist_and_copyright_to_exif(self, exif, artist, copyrights):
+    def _add_artist_and_copyright_to_exif(self, exif, artist, copyrights):
         if artist:
             exif[ExifTags.Base.Artist] = artist
         if copyrights:
@@ -77,10 +90,10 @@ class Transcoder(metaclass=Singleton):
         mediafile_ids = []
         for entity_id in entity_ids:
             entity = self.__get_entity(entity_id)
-            entity_identifier = self.__get_entity_identifier(entity)
+            entity_identifier = self.__get_entity_identifier_for_csv(entity)
             entity_mediafiles = self.__get_entity_mediafiles(entity_id, headers)
             for mediafile in entity_mediafiles.get("results", []):
-                mediafile_ids.append(self.__get_raw_id(mediafile))
+                mediafile_ids.append(get_raw_id(mediafile))
                 self.__add_single_file_to_zip(
                     zipfile,
                     working_dir,
@@ -143,8 +156,8 @@ class Transcoder(metaclass=Singleton):
         app.logger.debug(f"Adding {filename} to zip.")
         read_location = working_dir / filename
         with read_location.open("wb") as input_file:
-            self.__get_file(
-                self.__get_mediafile_download_link(
+            self._get_file(
+                self._get_mediafile_download_link(
                     mediafile,
                     headers,
                     user_email=user_email,
@@ -217,23 +230,8 @@ class Transcoder(metaclass=Singleton):
         req.raise_for_status()
         return req.json()
 
-    # TODO: We should move this to the elody-sdk  # ruff: ignore[FIX002]
-    @staticmethod
-    def __parse_filename_unfriendly_string(
-        input: str | None,
-        *,
-        replace_char="_",
-    ) -> str | None:
-        if input is None:
-            return None
-
-        return re.sub(r'[<>:"/\\|?*]|^\.|\.$', replace_char, input)
-
-    def __get_entity_identifier(self, entity):
-        return (
-            self.__parse_filename_unfriendly_string(entity.get("id", None))
-            or entity["_id"]
-        )
+    def __get_entity_identifier_for_csv(self, entity):
+        return parse_filename_unfriendly_string(entity.get("id", None)) or entity["_id"]
 
     def __get_entity_mediafiles(self, entity_id, headers=None):
         entity_mediafiles_url = (
@@ -257,15 +255,15 @@ class Transcoder(metaclass=Singleton):
             params["skip"] += 100
         return response
 
-    def __get_exif_for_mediafile(self, mediafile):
+    def _get_exif_for_mediafile(self, mediafile):
         artist, copyrights = [], []
-        if photographer := self.__get_item_metadata_value(mediafile, "photographer"):
+        if photographer := get_item_metadata_value(mediafile, "photographer"):
             artist.append(f"photographer: {photographer}")
-        if source := self.__get_item_metadata_value(mediafile, "source"):
+        if source := get_item_metadata_value(mediafile, "source"):
             artist.append(f"source: {source}")
-        if copyright := self.__get_item_metadata_value(mediafile, "copyright"):
+        if copyright := get_item_metadata_value(mediafile, "copyright"):
             copyrights.append(f"rightsholder: {copyright}")
-        if rights := self.__get_item_metadata_value(mediafile, "rights"):
+        if rights := get_item_metadata_value(mediafile, "rights"):
             copyrights.append(f"license: {rights}")
         if artist:
             artist = ", ".join(artist)
@@ -273,7 +271,7 @@ class Transcoder(metaclass=Singleton):
             copyrights = ", ".join(copyrights)
         return artist, copyrights
 
-    def __get_file(self, url, output, headers=None, max_retries=5):
+    def _get_file(self, url, output, headers=None, max_retries=5):
         retries = 0
         base_headers = self.__get_headers(headers) or {}
 
@@ -318,12 +316,6 @@ class Transcoder(metaclass=Singleton):
             return {**self.headers, **(headers)}
         return self.headers
 
-    def __get_item_metadata_value(self, item, key):
-        for entry in item.get("metadata", []):
-            if entry["key"] == key:
-                return entry["value"]
-        return None
-
     def __get_mediafile(self, mediafile_id, headers=None) -> MediafileEntity:
         mediafiles_url = f"{self.collection_api_url}/mediafiles/{mediafile_id}"
         req = requests.get(
@@ -333,39 +325,40 @@ class Transcoder(metaclass=Singleton):
         req.raise_for_status()
         return req.json()
 
-    def __get_mediafile_download_link(self, mediafile, headers=None, user_email=None):
+    def _get_mediafile_download_link(self, mediafile, headers=None, user_email=None):
 
-        mediafile_id = self.__get_raw_id(mediafile)
+        mediafile_id = get_raw_id(mediafile)
 
         mediafile = self.__get_mediafile(mediafile_id)
         app.logger.debug(
             f"Mediafile {mediafile_id} raw location: {mediafile.get('original_file_location')}"
         )
         external_download_url = mediafile.get("original_file_location")
-        parsed_uri = urlparse(external_download_url)
+        return self.__parse_storage_api_url(external_download_url, user_email)
+
+    def __parse_storage_api_url(
+        self, incoming_url: str, user_email: str | None = None
+    ) -> str:
+
+        parsed_incoming_url = urlparse(incoming_url)
         parsed_internal = urlparse(self.storage_api_url)
-        tail_path = parsed_uri.path.removeprefix("/storage/v1").lstrip("/")
+        tail_path = parsed_incoming_url.path.removeprefix("/storage/v1").lstrip("/")
         new_path = posixpath.join(parsed_internal.path, tail_path)
-        query_params = parse_qsl(parsed_uri.query)
+        query_params = parse_qsl(parsed_incoming_url.query)
         if user_email:
             query_params.append(("user_email", user_email))
         new_query = urlencode(query_params)
 
-        internal_url = urlunparse(
+        return urlunparse(
             (
                 parsed_internal.scheme,
                 parsed_internal.netloc,
                 new_path,  # generally should be  /download-with-ticket/<filename> if using internal urls, or /storage/v1 if using external
-                parsed_uri.params,  # generally we don't support params, but I think it's in theory used for cantaloupe when requesting a specific frame?
+                parsed_incoming_url.params,  # generally we don't support params, but I think it's in theory used for cantaloupe when requesting a specific frame?
                 new_query,  # ticket_id=...&user_email=...
-                parsed_uri.fragment,
+                parsed_incoming_url.fragment,
             )
         )
-
-        return internal_url
-
-    def __get_raw_id(self, item):
-        return item.get("_key", item["_id"])
 
     def __get_zip_upload_link(
         self,
@@ -388,16 +381,11 @@ class Transcoder(metaclass=Singleton):
         if req.status_code not in (200, 201):
             req.raise_for_status()
         upload_url = req.text.strip().replace('"', "")
-        parsed = urlparse(upload_url)
-        parsed_path = parsed.path
-        parsed_path = parsed_path.replace("/storage/v1", "")
-        internal_base = self.storage_api_url.rstrip("/")
-        query = f"?{parsed.query}" if parsed.query else ""
-        return f"{internal_base}{parsed_path}{query}&user_email={user_email}"
+        return self.__parse_storage_api_url(upload_url)
 
     def __patch_mediafile(self, mediafile, payload, headers):
         req = requests.patch(
-            f"{self.collection_api_url}/mediafiles/{self.__get_raw_id(mediafile)}",
+            f"{self.collection_api_url}/mediafiles/{get_raw_id(mediafile)}",
             json=payload,
             headers=self.__get_headers(headers),
         )
@@ -462,7 +450,7 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 201:
             req.raise_for_status()
 
-    def __upload_transcode(
+    def _upload_transcode(
         self,
         mediafile,
         file_name,
@@ -479,7 +467,7 @@ class Transcoder(metaclass=Singleton):
         if req.status_code != 201:
             req.raise_for_status()
         ticket_id = req.text.strip().replace('"', "")
-        storage_url = f"{self.storage_api_url}/upload/transcode?id={self.__get_raw_id(mediafile)}&ticket_id={ticket_id}&ignore_duplicate_check={ignore_duplicate_check}"
+        storage_url = f"{self.storage_api_url}/upload/transcode?id={get_raw_id(mediafile)}&ticket_id={ticket_id}&ignore_duplicate_check={ignore_duplicate_check}"
         if parent_job_id:
             storage_url += f"&parent_job_id={parent_job_id}"
         app.logger.debug(f"Uploading with {storage_url}")
@@ -645,54 +633,7 @@ class Transcoder(metaclass=Singleton):
         parent_job_id: str | None = None,
         user_email: str | None = None,
         ignore_duplicate_check: bool = False,
-    ):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_dir_path = Path(temp_dir)
-            original_filename_as_path = Path(mediafile["original_filename"])
-            read_location = temp_dir_path / mediafile["filename"]
-            write_location = (
-                temp_dir_path
-                / f"{original_filename_as_path.parent / original_filename_as_path.stem}.{operation_name}"
-            )
-            operation = {
-                "jpg": {
-                    "func": self.transcode_to_jpeg,
-                    "args": [mediafile, read_location, write_location, headers],
-                },
-                "mp3": {
-                    "func": self.transcode_to_mp3,
-                    "args": [read_location, write_location],
-                },
-                "mp4": {
-                    "func": self.transcode_to_mp4,
-                    "args": [mediafile, read_location, write_location, headers],
-                },
-            }.get(operation_name)
-            if not operation:
-                raise UnsupportedOperationException(operation_name)
-            with read_location.open("wb") as input_file:
-                app.logger.info("Starting download of file")
-                self.__get_file(
-                    self.__get_mediafile_download_link(
-                        mediafile,
-                        headers,
-                        user_email=user_email,
-                    ),
-                    input_file,
-                    headers,
-                )
-                app.logger.info("Finished download of file")
-            operation["func"](*operation["args"])  # ty: ignore[call-non-callable, invalid-argument-type, not-iterable]
-            if operation.get("upload", True):
-                with write_location.open("rb") as output_file:
-                    self.__upload_transcode(
-                        mediafile,
-                        write_location.name,
-                        output_file,
-                        headers,
-                        parent_job_id,
-                        ignore_duplicate_check=ignore_duplicate_check,
-                    )
+    ): ...
 
     def transcode_multiple_mediafiles(
         self,
@@ -716,8 +657,8 @@ class Transcoder(metaclass=Singleton):
             for mediafile in mediafiles:
                 read_location = temp_dir_path / cast(str, mediafile["filename"])
                 with read_location.open("wb") as input_file:
-                    self.__get_file(
-                        self.__get_mediafile_download_link(
+                    self._get_file(
+                        self._get_mediafile_download_link(
                             mediafile,
                             headers,
                             user_email=user_email,
@@ -735,163 +676,6 @@ class Transcoder(metaclass=Singleton):
                         master_entity_id,
                     )
 
-    def transcode_resize(
-        self, src_imag_size: tuple, max_size: int
-    ) -> Literal[False] | tuple:
-        """
-        If the transcode has a total pixels <= max_size**2 it is fine, and we should not resize
-        Otherwise, to get to max pixels we need to multiply total_pixels * max_pixels/total_pixels
-        This means we need to multiply each dimension of the image by the square_root
-
-        Let's say max = 200 -> max_pixels = 40000, and we have an image of 400*400 = 160000.
-        40000 / 160000 = 1/4
-        this means we have to multiply by sqrt(1/4) = 1/2 -> (200,200)
-        """
-        max_pixels = max_size**2
-        total_pixels = src_imag_size[0] * src_imag_size[1]
-        if total_pixels <= max_pixels:
-            return False
-        scale_factor = sqrt(max_pixels / total_pixels)
-        return (
-            floor(src_imag_size[0] * scale_factor),
-            floor(src_imag_size[1] * scale_factor),
-        )
-
-    def transcode_to_jpeg(self, mediafile, read_location, write_location, headers=None):
-        self.add_width_height(mediafile, read_location, headers)
-        MAX_DIMENSION = 4000
-        with Image.open(read_location) as src_img:
-            exif = src_img.getexif()
-            exif.pop(TiffImagePlugin.STRIPOFFSETS, None)
-            artist, copyrights = self.__get_exif_for_mediafile(mediafile)
-            self.__add_artist_and_copyright_to_exif(exif, artist, copyrights)
-
-            if src_img.mode == "P" and src_img.format == "TIFF":
-                colormap = cast(TiffImageFile, src_img).tag_v2.get(320)
-                if colormap and max(colormap) <= 255:
-                    app.logger.warning(
-                        "Detected malformed 8-bit TIFF ColorMap. Patching..."
-                    )
-                    num_colors = len(colormap) // 3
-                    fixed_palette = []
-                    for i in range(num_colors):
-                        r = colormap[i]
-                        g = colormap[i + num_colors]
-                        b = colormap[i + 2 * num_colors]
-                        fixed_palette.extend([r, g, b])
-                    src_img.putpalette(fixed_palette)
-
-            if src_img.mode in ("I", "F", "I;16", "I;16B"):
-                app.logger.warning(f"Normalizing high-depth mode: {src_img.mode}")
-                min_val, max_val = src_img.getextrema()
-                if max_val > min_val:
-                    scale = 255.0 / (max_val - min_val)
-                    src_img = src_img.point(lambda i: (i - min_val) * scale).convert(
-                        "L"
-                    )
-                else:
-                    src_img = src_img.convert("L")
-
-            if src_img.mode == "P":
-                if "transparency" in src_img.info:
-                    src_img = src_img.convert("RGBA")
-                else:
-                    src_img = src_img.convert("RGB")
-
-            if src_img.mode in ("RGBA", "LA"):
-                background = Image.new("RGB", src_img.size, (255, 255, 255))
-                background.paste(src_img, mask=src_img.split()[-1])
-                src_img = background
-
-            ImageOps.exif_transpose(src_img, in_place=True)
-
-            if resized_size := self.transcode_resize(src_img.size, MAX_DIMENSION):
-                src_img.thumbnail(resized_size, Image.Resampling.LANCZOS)
-            with src_img.convert("RGB") as dst_img:
-                try:
-                    dst_img.save(
-                        write_location,
-                        quality=75,
-                        optimize=True,
-                        progressive=True,
-                        exif=exif,
-                    )
-                except Exception as ex:  # noqa: BLE001
-                    exif.clear()
-                    self.__add_artist_and_copyright_to_exif(exif, artist, copyrights)
-                    dst_img.save(
-                        write_location,
-                        quality=75,
-                        optimize=True,
-                        progressive=True,
-                        exif=exif,
-                    )
-                    app.logger.info(f"First conversion failed with: {ex}")
-
-    def transcode_to_mp3(self, read_location: Path, write_location: Path):
-        try:
-            subprocess.run(
-                ["ffmpeg", "-y", "-i", str(read_location), str(write_location)],
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            app.logger.debug("MP3 transcode finished")
-
-        except subprocess.CalledProcessError as e:
-            app.logger.error(f"FFmpeg failed with exit code {e.returncode}")
-            app.logger.error(f"FFmpeg error log:\n{e.stderr}")
-
-            raise
-
-    def transcode_to_mp4(
-        self, mediafile, read_location: Path, write_location: Path, headers=None
-    ):
-        self.add_width_height(mediafile, read_location, headers)
-
-        c = Converter()
-        info = c.probe(str(read_location))
-        opts = {
-            "format": "mp4",
-            "video": {
-                "codec": "h264",
-                "width": info.video.video_width,
-                "height": info.video.video_height,
-                "fps": info.video.video_fps,
-                "ffmpeg_skin_opts": "-movflags +faststart",
-            },
-        }
-        if info.audio:
-            AAC_SUPPORTED_SAMPLERATES = [
-                96000,
-                88200,
-                64000,
-                48000,
-                44100,
-                32000,
-                24000,
-                22050,
-                16000,
-                12000,
-                11025,
-                8000,
-                7350,
-            ]
-            source_rate = info.audio.audio_samplerate
-            closest_rate = min(
-                AAC_SUPPORTED_SAMPLERATES,
-                key=lambda x: abs(x - source_rate),
-            )
-
-            opts["audio"] = {
-                "codec": "aac",
-                "samplerate": closest_rate,
-                "channels": info.audio.audio_channels,
-            }
-        for _ in c.convert(str(read_location), str(write_location), opts, timeout=0):
-            pass
-
     def transcode_to_pdf(self, mediafiles, read_location: Path, write_location: Path):
         images = [
             Image.open(f"{read_location / f.get('filename')}") for f in mediafiles
@@ -903,3 +687,16 @@ class Transcoder(metaclass=Singleton):
             save_all=True,
             append_images=images[1:],
         )
+
+    def get_filepaths(
+        self, mediafile: MediafileEntity, temp_dir_name: str, operation_name
+    ) -> tuple[Path, Path]:
+        temp_dir_path = Path(temp_dir_name)
+        original_filename_as_path = Path(mediafile["original_filename"])
+        download_location = temp_dir_path / mediafile["filename"]
+        write_location = (
+            temp_dir_path
+            / f"{original_filename_as_path.parent / original_filename_as_path.stem}.{operation_name}"
+        )
+
+        return download_location, write_location
