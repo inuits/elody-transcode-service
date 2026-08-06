@@ -17,14 +17,14 @@ variables:
   TARGET_CLUSTER_DEV: inuits-prod
   UV_IMAGE_PREFIX: kearblx6.c1.gra9.container-registry.ovh.net/ghcr
 
-customers:
-  parallel:
-    matrix:
-      - CUSTOMER:
-          - coghent
-          - digipolis
-          - vliz
-          - imec
+# customers:
+#   parallel:
+#     matrix:
+#       - CUSTOMER:
+#           - coghent
+#           - digipolis
+#           - vliz
+#           - imec
 
 .build:
   variables:
