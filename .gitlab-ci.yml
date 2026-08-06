@@ -1,23 +1,50 @@
 ---
 include:
-  - project: 'inuits/gitlab-ci/pipeline-templates'
-    ref: 'v4.1.0'
+  - project: "inuits/gitlab-ci/pipeline-templates"
+    ref: "v4.20.0"
     file:
-      - '/pipelines/customers/dams/deliver-multi-customer.yml'
-      - '/jobs/docker/build-pip.yml'
-
+      - "pipelines/customers/deploy.yml"
+      - "jobs/docker/build-pip.yml"
 
 variables:
-  PROJECT: 'dams'
-  APPLICATION: 'base-transcoder'
+  CUSTOMER: "inuits"
+  PROJECT: "dams"
+  APPLICATION: "base-transcoder"
+
+  SKIP_DEPLOY: "true"
 
   HARBOR_PROJECT_DEV: elody-dams-dev
+  TARGET_CLUSTER_DEV: inuits-prod
+  UV_IMAGE_PREFIX: kearblx6.c1.gra9.container-registry.ovh.net/ghcr
 
 customers:
   parallel:
     matrix:
       - CUSTOMER:
-        - coghent
-        - digipolis
-        - vliz
-        - imec
+          - coghent
+          - digipolis
+          - vliz
+          - imec
+
+.build:
+  variables:
+    DOCKER_EXTRA_BUILD_FLAGS: --build-arg UV_IMAGE_PREFIX=${UV_IMAGE_PREFIX}
+
+build:
+  variables:
+    DOCKERFILE: docker/uv.Dockerfile
+  rules:
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
+      when: always
+    - if: "$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH"
+      when: manual
+
+# Disable uat, not needed
+uat:
+  rules:
+    - when: never
+
+# Disable prod, not needed
+prod:
+  rules:
+    - when: never
