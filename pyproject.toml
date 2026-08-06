@@ -64,6 +64,7 @@ ignore = [
   "RUF012", # Allow mutables as default class member: This actually needs to be fixed since it can cause bugs
   "E722",   # Allow bare excepts (we don't have enough custom exceptions)
   "E501",   # Ignore line length (let the formatter handle this)
+  "ERA001",
 ]
 
 [tool.uv.sources]
