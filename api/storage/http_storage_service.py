@@ -107,25 +107,25 @@ class HttpStorageService:
             if req.status_code != 201:
                 req.raise_for_status()
 
-    # def upload_thumbnail(
-    #     self,
-    #     mediafile: MediafileEntity,
-    #     file_name: str,
-    #     file_path: Path,
-    #     headers: dict | None = None,
-    #     parent_job_id: str | None = None,
-    #     ignore_duplicate_check=False,
-    # ):
-    #     ticket_id = self.__get_ticket_id(file_name, headers)
-    #     storage_url = f"{self.storage_api_url}/upload-with-ticket/thumbnail?id={get_raw_id(mediafile)}&ticket_id={ticket_id}&ignore_duplicate_check={ignore_duplicate_check}"
-    #     if parent_job_id:
-    #         storage_url += f"&parent_job_id={parent_job_id}"
-    #     self.logger.debug(f"Uploading with {storage_url}")
-    #     with file_path.open("rb") as file_bytes:
-    #         req = requests.post(
-    #             storage_url,
-    #             data=file_bytes,
-    #             headers=self.__get_headers(headers),
-    #         )
-    #         if req.status_code != 201:
-    #             req.raise_for_status()
+    def upload_thumbnail(
+        self,
+        mediafile: MediafileEntity,
+        file_name: str,
+        file_path: Path,
+        headers: dict | None = None,
+        parent_job_id: str | None = None,
+        ignore_duplicate_check=False,
+    ):
+        ticket_id = self.__get_ticket_id(file_name, headers)
+        storage_url = f"{self.storage_api_url}/upload/thumbnail?id={get_raw_id(mediafile)}&ticket_id={ticket_id}&ignore_duplicate_check={ignore_duplicate_check}"
+        if parent_job_id:
+            storage_url += f"&parent_job_id={parent_job_id}"
+        self.logger.debug(f"Uploading with {storage_url}")
+        with file_path.open("rb") as file_bytes:
+            req = requests.post(
+                storage_url,
+                data=file_bytes,
+                headers=self.__get_headers(headers),
+            )
+            if req.status_code != 201:
+                req.raise_for_status()
