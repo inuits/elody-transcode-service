@@ -1,7 +1,7 @@
 ---
 include:
   - project: "inuits/gitlab-ci/pipeline-templates"
-    ref: "v4.20.0"
+    ref: "v4.20.4"
     file:
       - "pipelines/customers/deploy.yml"
       - "jobs/docker/build-pip.yml"
