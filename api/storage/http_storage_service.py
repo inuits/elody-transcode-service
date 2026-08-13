@@ -97,7 +97,7 @@ class HttpStorageService:
         storage_url = f"{self.storage_api_url}/upload/transcode?id={get_raw_id(mediafile)}&ticket_id={ticket_id}&ignore_duplicate_check={ignore_duplicate_check}"
         if parent_job_id:
             storage_url += f"&parent_job_id={parent_job_id}"
-        self.logger.debug(f"Uploading with {storage_url}")
+        self.logger.info(f"Uploading transcode to {storage_url}")
         with file_path.open("rb") as file_bytes:
             req = requests.post(
                 storage_url,
@@ -120,7 +120,7 @@ class HttpStorageService:
         storage_url = f"{self.storage_api_url}/upload/thumbnail?id={get_raw_id(mediafile)}&ticket_id={ticket_id}&ignore_duplicate_check={ignore_duplicate_check}"
         if parent_job_id:
             storage_url += f"&parent_job_id={parent_job_id}"
-        self.logger.debug(f"Uploading with {storage_url}")
+        self.logger.info(f"Uploading thumbnail to {storage_url}")
         with file_path.open("rb") as file_bytes:
             req = requests.post(
                 storage_url,
