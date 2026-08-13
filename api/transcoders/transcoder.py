@@ -340,6 +340,7 @@ class Transcoder(metaclass=Singleton):
         self, incoming_url: str, user_email: str | None = None
     ) -> str:
 
+        app.logger.debug(f"Incoming url: {incoming_url}")
         parsed_incoming_url = urlparse(incoming_url)
         parsed_internal = urlparse(self.storage_api_url)
         tail_path = parsed_incoming_url.path.removeprefix("/storage/v1").lstrip("/")
