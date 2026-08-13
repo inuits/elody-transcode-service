@@ -525,7 +525,7 @@ class Transcoder(metaclass=Singleton):
                 "img_height": info.video.video_height,
             }
         if not data["img_width"] or not data["img_height"]:
-            raise GetWidthHeightException
+            raise GetWidthHeightException(mediafile)
         self.__patch_mediafile(mediafile, data, headers)
 
     def create_zip(self, request_body, headers=None, user_email=None):
