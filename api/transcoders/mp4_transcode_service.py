@@ -3,9 +3,12 @@ from pathlib import Path
 
 from app import app
 from converter import Converter
+from elody.util import get_boolean_env
 from elody_types import MediafileEntity
 
 from .transcoder import Transcoder
+
+VIDEO_THUMBNAIL_GENERATION = get_boolean_env("VIDEO_THUMBNAIL_GENERATION", False)
 
 
 class MP4Transcoder(Transcoder, format_name="mp4"):
@@ -51,14 +54,15 @@ class MP4Transcoder(Transcoder, format_name="mp4"):
                 parent_job_id,
                 ignore_duplicate_check=ignore_duplicate_check,
             )
-            self.storage.upload_thumbnail(
-                mediafile,
-                thumbnail_write_location.name,
-                thumbnail_write_location,
-                headers,
-                parent_job_id,
-                ignore_duplicate_check=ignore_duplicate_check,
-            )
+            if VIDEO_THUMBNAIL_GENERATION:
+                self.storage.upload_thumbnail(
+                    mediafile,
+                    thumbnail_write_location.name,
+                    thumbnail_write_location,
+                    headers,
+                    parent_job_id,
+                    ignore_duplicate_check=ignore_duplicate_check,
+                )
 
     def transcode_to_mp4(
         self,
@@ -112,4 +116,5 @@ class MP4Transcoder(Transcoder, format_name="mp4"):
         for _ in c.convert(str(read_location), str(write_location), opts, timeout=0):
             pass
 
-        c.thumbnail(str(write_location), 0, str(thumbnail_write_location))
+        if VIDEO_THUMBNAIL_GENERATION:
+            c.thumbnail(str(write_location), 0, str(thumbnail_write_location))
