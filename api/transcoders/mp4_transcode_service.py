@@ -3,9 +3,12 @@ from pathlib import Path
 
 from app import app
 from converter import Converter
+from elody.util import get_boolean_env
 from elody_types import MediafileEntity
 
 from .transcoder import Transcoder
+
+VIDEO_THUMBNAIL_GENERATION = get_boolean_env("VIDEO_THUMBNAIL_GENERATION", False)
 
 
 class MP4Transcoder(Transcoder, format_name="mp4"):
@@ -23,7 +26,7 @@ class MP4Transcoder(Transcoder, format_name="mp4"):
             download_location, write_location = self.get_filepaths(
                 mediafile, temp_dir, operation_name
             )
-            # thumbnail_write_location = write_location.with_suffix(".jpg")
+            thumbnail_write_location = write_location.with_suffix(".jpg")
             app.logger.info("Starting download of file")
             self.storage.get_file(
                 self._get_mediafile_download_link(
@@ -40,7 +43,7 @@ class MP4Transcoder(Transcoder, format_name="mp4"):
                 mediafile,
                 download_location,
                 write_location,
-                # thumbnail_write_location,
+                thumbnail_write_location,
                 headers,
             )
             self.storage.upload_transcode(
@@ -51,21 +54,22 @@ class MP4Transcoder(Transcoder, format_name="mp4"):
                 parent_job_id,
                 ignore_duplicate_check=ignore_duplicate_check,
             )
-            # self.storage.upload_thumbnail(
-            #     mediafile,
-            #     thumbnail_write_location.name,
-            #     thumbnail_write_location,
-            #     headers,
-            #     parent_job_id,
-            #     ignore_duplicate_check=ignore_duplicate_check,
-            # )
+            if VIDEO_THUMBNAIL_GENERATION:
+                self.storage.upload_thumbnail(
+                    mediafile,
+                    thumbnail_write_location.name,
+                    thumbnail_write_location,
+                    headers,
+                    parent_job_id,
+                    ignore_duplicate_check=ignore_duplicate_check,
+                )
 
     def transcode_to_mp4(
         self,
         mediafile,
         read_location: Path,
         write_location: Path,
-        # thumbnail_write_location: Path,
+        thumbnail_write_location: Path,
         headers=None,
     ):
         self.add_width_height(mediafile, read_location, headers)
@@ -112,4 +116,5 @@ class MP4Transcoder(Transcoder, format_name="mp4"):
         for _ in c.convert(str(read_location), str(write_location), opts, timeout=0):
             pass
 
-        # c.thumbnail(str(write_location), 0, str(thumbnail_write_location))
+        if VIDEO_THUMBNAIL_GENERATION:
+            c.thumbnail(str(write_location), 0, str(thumbnail_write_location))
