@@ -164,7 +164,11 @@ def create_zip(message: Message):
                 getenv("COLLECTION_API_URL", ""),
                 logger=app.logger,
             )
-        ).create_zip(data, data["auth_headers"], user_email=user_email)
+        ).create_zip(
+            data, data["auth_headers"], user_email=user_email, job_id=data.get("job_id")
+        )
+        if job_id := data.get("job_id"):
+            finish_job(job_id, get_rabbit=get_rabbit)
         message.ack()
     except Exception as ex:  # noqa: BLE001
         app.logger.error(f"Could not create ZIP-file {ex}")

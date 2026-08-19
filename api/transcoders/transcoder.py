@@ -15,6 +15,7 @@ import app
 import requests
 from converter import Converter
 from elody.exceptions import NotFoundException
+from elody.job import add_document_to_job, fail_job, start_job
 from elody.util import (
     get_boolean_env,
     get_item_metadata_value,
@@ -28,6 +29,7 @@ from exceptions_transcoder import (
     UnsupportedOperationException,
 )
 from PIL import ExifTags, Image
+from rabbit import get_rabbit
 from requests.exceptions import ChunkedEncodingError, ConnectionError
 from retry import retry
 from storage.base_storage import StorageService
@@ -529,13 +531,16 @@ class Transcoder(metaclass=Singleton):
             raise GetWidthHeightException(mediafile)
         self.__patch_mediafile(mediafile, data, headers)
 
-    def create_zip(self, request_body, headers=None, user_email=None):
+    def create_zip(self, request_body, headers=None, user_email=None, job_id=None):
         if download_entity_id := request_body.get("download_entity_id"):
             self.__set_download_entity_progress(
                 download_entity_id,
                 "In Progress",
                 headers,
             )
+            if job_id:
+                start_job(job_id, get_rabbit=get_rabbit)
+                add_document_to_job(job_id, download_entity_id, get_rabbit=get_rabbit)
         basic_csv = bool(request_body.get("basic_csv"))
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_dir_path = Path(temp_dir)
@@ -565,6 +570,12 @@ class Transcoder(metaclass=Singleton):
                     self.__set_download_entity_progress(
                         download_entity_id, "Failed", headers
                     )
+                    if job_id:
+                        fail_job(
+                            job_id,
+                            "Failure adding entities to zip",
+                            get_rabbit=get_rabbit,
+                        )
                     raise
                 try:
                     self.__add_mediafiles_to_zip(
@@ -581,6 +592,12 @@ class Transcoder(metaclass=Singleton):
                     self.__set_download_entity_progress(
                         download_entity_id, "Failed", headers
                     )
+                    if job_id:
+                        fail_job(
+                            job_id,
+                            "Failure adding mediafiles to zip",
+                            get_rabbit=get_rabbit,
+                        )
                     raise
                 object_ids = {
                     "entities": request_body.get("entities", []),
@@ -609,6 +626,12 @@ class Transcoder(metaclass=Singleton):
                         self.__set_download_entity_progress(
                             download_entity_id, "Failed", headers
                         )
+                        if job_id:
+                            fail_job(
+                                job_id,
+                                "Failure adding csvs to zip",
+                                get_rabbit=get_rabbit,
+                            )
                         raise
             if download_entity_id:
                 try:
@@ -625,6 +648,12 @@ class Transcoder(metaclass=Singleton):
                     self.__set_download_entity_progress(
                         download_entity_id, "Failed", headers
                     )
+                    if job_id:
+                        fail_job(
+                            job_id,
+                            "Failure uploading zip to download-entity",
+                            get_rabbit=get_rabbit,
+                        )
 
     def transcode(
         self,

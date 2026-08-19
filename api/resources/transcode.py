@@ -2,6 +2,7 @@ import os
 
 from cloudevents.v1.conversion import to_dict
 from cloudevents.v1.http import CloudEvent
+from elody.job import init_job
 from flask import request
 from flask_restful import Resource, abort
 from inuits_policy_based_auth import RequestContext
@@ -94,9 +95,18 @@ class ZipTranscode(BaseTranscode):
         data = self._get_request_body()
         data["auth_headers"] = self._get_auth_headers()
         data["user_email"] = get_user_context().id
+        data["job_id"] = init_job(
+            name="Zip Download Creation",
+            job_type="Download Creation",
+            get_rabbit=get_rabbit,
+            user_email=get_user_context().id,
+        )
         event = to_dict(CloudEvent(attributes, data))
         get_rabbit().send(event, routing_key=f"{ROUTING_KEY_PREFIX}.create_zip")
         return (
-            "ZIP creation job place on the queue",
+            {
+                "message": "ZIP creation job place on the queue",
+                "job_id": data["job_id"],
+            },
             201,
         )
