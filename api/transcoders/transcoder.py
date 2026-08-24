@@ -339,7 +339,10 @@ class Transcoder(metaclass=Singleton):
         return self.__parse_storage_api_url(external_download_url, user_email)
 
     def __parse_storage_api_url(
-        self, incoming_url: str, user_email: str | None = None
+        self,
+        incoming_url: str,
+        user_email: str | None = None,
+        extra_params: dict | None = None,
     ) -> str:
 
         app.logger.debug(f"Incoming url: {incoming_url}")
@@ -350,6 +353,8 @@ class Transcoder(metaclass=Singleton):
         query_params = parse_qsl(parsed_incoming_url.query)
         if user_email:
             query_params.append(("user_email", user_email))
+        if extra_params:
+            query_params.extend(extra_params.items())
         new_query = urlencode(query_params)
 
         return urlunparse(
@@ -364,11 +369,7 @@ class Transcoder(metaclass=Singleton):
         )
 
     def __get_zip_upload_link(
-        self,
-        entity_id,
-        zip_filename,
-        headers=None,
-        user_email=None,
+        self, entity_id, zip_filename, headers=None, user_email=None, job_id=None
     ):
         if not headers:
             headers = {}
@@ -384,7 +385,9 @@ class Transcoder(metaclass=Singleton):
         if req.status_code not in (200, 201):
             req.raise_for_status()
         upload_url = req.text.strip().replace('"', "")
-        return self.__parse_storage_api_url(upload_url)
+        return self.__parse_storage_api_url(
+            upload_url, extra_params={"parent_job_id": job_id} if job_id else None
+        )
 
     def __patch_mediafile(self, mediafile, payload, headers):
         req = requests.patch(
@@ -496,6 +499,7 @@ class Transcoder(metaclass=Singleton):
         zip_location: Path,
         headers=None,
         user_email=None,
+        job_id=None,
     ):
         """Add zip to download entity and upload to S3
         Also deletes the zip from the filesystem
@@ -507,6 +511,7 @@ class Transcoder(metaclass=Singleton):
                 zip_location.name,
                 headers,
                 user_email=user_email,
+                job_id=job_id,
             )
             app.logger.debug(f"received zip_upload_link {zip_upload_link}\n\n")
             req = self.__make_upload_zip_request(zip_upload_link, zip)
@@ -640,6 +645,7 @@ class Transcoder(metaclass=Singleton):
                         zip_location,
                         headers,
                         user_email=user_email,
+                        job_id=job_id or None,
                     )
                     self.__set_download_entity_progress(
                         download_entity_id, "Finished", headers
