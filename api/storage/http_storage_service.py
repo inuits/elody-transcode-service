@@ -98,14 +98,18 @@ class HttpStorageService:
         if parent_job_id:
             storage_url += f"&parent_job_id={parent_job_id}"
         self.logger.info(f"Uploading transcode to {storage_url}")
-        with file_path.open("rb") as file_bytes:
-            req = requests.post(
-                storage_url,
-                data=file_bytes,
-                headers=self.__get_headers(headers),
-            )
-            if req.status_code != 201:
-                req.raise_for_status()
+        try:
+            with file_path.open("rb") as file_bytes:
+                req = requests.post(
+                    storage_url,
+                    data=file_bytes,
+                    headers=self.__get_headers(headers),
+                )
+                if req.status_code != 201:
+                    req.raise_for_status()
+        except Exception as e:
+            self.logger.exception(e, stack_info=True)
+            raise
 
     def upload_thumbnail(
         self,
