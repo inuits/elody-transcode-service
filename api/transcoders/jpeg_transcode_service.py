@@ -42,12 +42,18 @@ class JPEGTranscoder(Transcoder, format_name="jpeg"):
             )
             app.logger.info("Finished download of file")
 
-            self.transcode_to_jpeg(
-                mediafile,
-                download_location,
-                write_location,
-                headers,
-            )
+            try:
+                self.transcode_to_jpeg(
+                    mediafile,
+                    download_location,
+                    write_location,
+                    headers,
+                )
+
+                app.logger.info("Finished download of file")
+            except Exception as e:
+                app.logger.exception(e, stack_info=True)
+                raise
             self.storage.upload_transcode(
                 mediafile,
                 write_location.name,
