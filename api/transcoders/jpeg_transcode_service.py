@@ -111,8 +111,8 @@ class JPEGTranscoder(Transcoder, format_name="jpeg"):
 
             ImageOps.exif_transpose(src_img, in_place=True)
 
-            if resized_size := self.transcode_resize(src_img.size, MAX_DIMENSION):
-                src_img.thumbnail(resized_size, Image.Resampling.LANCZOS)
+            # if resized_size := self.transcode_resize(src_img.size, MAX_DIMENSION):
+            #     src_img.thumbnail(resized_size, Image.Resampling.LANCZOS)
             with src_img.convert("RGB") as dst_img:
                 try:
                     dst_img.save(
