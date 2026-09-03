@@ -3,7 +3,7 @@ amqpstorm-flask==0.6.0-dev
 aniso8601==10.0.0
 Authlib==1.7.1
 blinker==1.9.0
-certifi==2024.8.30
+certifi==2024.12.14
 cffi==2.0.0
 charset-normalizer==3.4.1
 click==8.1.8
