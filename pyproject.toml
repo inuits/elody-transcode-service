@@ -33,7 +33,7 @@ dependencies = [
   "pycparser==2.22",
   "pytz==2024.1",
   "rabbitmq-pika-flask==1.2.35",
-  "requests==2.33.0",
+  "requests==2.34.2",
   "retry==0.9.2",
   "sentry-sdk[flask]==2.16.0",
   "six==1.16.0",
