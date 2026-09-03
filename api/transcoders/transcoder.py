@@ -154,6 +154,15 @@ class Transcoder(metaclass=Singleton):
         destination_path: Path = Path(),
         user_email=None,
     ):
+        if not mediafile.get("original_filename") or not mediafile.get(
+            "original_file_location"
+        ):
+            # A mediafile can carry only an external url instead of a stored
+            # file; leave it out instead of failing the whole zip.
+            app.logger.info(
+                f"Skipping mediafile {get_raw_id(mediafile)} in zip, it has no stored file."
+            )
+            return
         filename: str = mediafile["original_filename"]
         app.logger.debug(f"Adding {filename} to zip.")
         read_location = working_dir / filename
@@ -638,6 +647,17 @@ class Transcoder(metaclass=Singleton):
                                 get_rabbit=get_rabbit,
                             )
                         raise
+                zip_is_empty = not zip.namelist()
+            if zip_is_empty and download_entity_id:
+                app.logger.error(
+                    f"Nothing could be added to the zip for {download_entity_id}."
+                )
+                self.__set_download_entity_progress(
+                    download_entity_id, "Failed", headers
+                )
+                if job_id:
+                    fail_job(job_id, "Nothing to zip", get_rabbit=get_rabbit)
+                return
             if download_entity_id:
                 try:
                     self.__upload_zip_to_download_entity(
