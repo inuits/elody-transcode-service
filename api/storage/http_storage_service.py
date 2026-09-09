@@ -108,7 +108,7 @@ class HttpStorageService:
                 if req.status_code != 201:
                     req.raise_for_status()
         except Exception as e:
-            self.logger.exception(e, stack_info=True)
+            self.logger.exception(e, stack_info=True)  # ruff: ignore [TRY401]
             raise
 
     def upload_thumbnail(

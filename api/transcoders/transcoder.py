@@ -5,7 +5,7 @@ import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import cast
+from typing import Any, ClassVar, cast
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 from uuid import uuid4
 from zipfile import ZipFile
@@ -39,7 +39,7 @@ Image.MAX_IMAGE_PIXELS = None
 
 
 class Singleton(type):
-    _instances = {}
+    _instances: ClassVar[dict[type, Any]] = {}
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
@@ -48,7 +48,7 @@ class Singleton(type):
 
 
 class Transcoder(metaclass=Singleton):
-    _registry = {}
+    _registry: ClassVar[dict[str, type]] = {}
 
     def __init_subclass__(cls, format_name, **kwargs):
         super().__init_subclass__(**kwargs)
