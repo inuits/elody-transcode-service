@@ -42,29 +42,6 @@ dependencies = [
   "werkzeug==3.1.6",
 ]
 
-[tool.ruff.lint]
-extend-select = [
-  "F",      # Pyflakes: Basic logical errors and unused variables
-  "E",      # pycodestyle errors: Actual PEP8 violations (not just whitespace)
-  "ERA",    # Eradicate: remove commented out code
-  "I",      # isort: Keeps imports tidy automatically
-  "UP",     # pyupgrade: Keeps syntax modern (mostly auto-fixable)
-  "B",      # flake8-bugbear: Essential for catching common design flaws
-  "PTH",    # flake8-use-pathlib: prefer pathlib objects over os.path
-  "RUF",    # Ruff-specific: Generally sensible and high-performance rules
-  "C4",     # flake8-comprehensions: enforce better list/dict/set comprehensions
-  "LOG",    # flake8-logging: catch bad logging practices (like f-strings in log messages)
-  "T20",    # flake8-print: catch leftover debug print statements
-  "DTZ",    # Datetime Timezone: Since we're doing quite some datetime logic around the notifications, this should help catch bugs
-  "FIX002", # Errors on lines with a TODO, disable for those lines with # noqa: FIX002
-]
-ignore = [
-  "A003",   # Allow class attributes to shadow built-ins (e.g., model.id)
-  "B006",   # Allow mutables as default arg: This actually needs to be fixed since it can cause bugs but generally we don't use it in a way that can actually cause bugs
-  "RUF012", # Allow mutables as default class member: This actually needs to be fixed since it can cause bugs
-  "E722",   # Allow bare excepts (we don't have enough custom exceptions)
-  "E501",   # Ignore line length (let the formatter handle this)
-]
 
 [tool.uv.sources]
 video-converter = { git = "https://github.com/UbiCastTeam/python-video-converter.git" }
