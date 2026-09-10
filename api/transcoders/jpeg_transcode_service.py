@@ -54,7 +54,7 @@ class JPEGTranscoder(Transcoder, format_name="jpeg"):
             except Exception as e:
                 app.logger.exception(e, stack_info=True)
                 raise
-            self.storage.upload_transcode(
+            self.storage.upload_thumbnail(
                 mediafile,
                 write_location.name,
                 write_location,
@@ -65,7 +65,7 @@ class JPEGTranscoder(Transcoder, format_name="jpeg"):
 
     def transcode_to_jpeg(self, mediafile, read_location, write_location, headers=None):
         self.add_width_height(mediafile, read_location, headers)
-        MAX_DIMENSION = 4000
+        MAX_DIMENSION = 1000
         with Image.open(read_location) as src_img:
             exif = src_img.getexif()
             exif.pop(TiffImagePlugin.STRIPOFFSETS, None)

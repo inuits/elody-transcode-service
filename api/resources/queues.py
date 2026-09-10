@@ -200,6 +200,28 @@ def transcode_to_jpeg(message: Message):
 
 @get_rabbit().queue(
     **__argument_wrapper(
+        queue_name=f"{queue_prefix}.transcode.to.ptiff",
+        routing_key=[
+            f"{routing_key_prefix}.transcode_to_ptiff",
+            f"{routing_key_prefix}.file_uploaded.image.*",
+        ],
+        queue_type="quorum",
+    ),
+    auto_ack=False,
+    full_message_object=True,
+)
+def transcode_to_ptiff(message: Message):
+
+    body = message.json()
+    try:
+        __do_transcode(body, "ptiff", ["image/"], "Transcoding {} to ptif failed with:")
+        message.ack()
+    except:
+        message.nack(requeue=True)
+
+
+@get_rabbit().queue(
+    **__argument_wrapper(
         queue_name=f"{queue_prefix}.transcode.to.mp3",
         routing_key=[
             f"{routing_key_prefix}.transcode_to_mp3",
