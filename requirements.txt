@@ -35,3 +35,4 @@ six==1.16.0
 urllib3==2.7.0
 git+https://github.com/UbiCastTeam/python-video-converter.git
 Werkzeug==3.1.6
+pyvips[binary]==3.2.0
