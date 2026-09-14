@@ -389,7 +389,7 @@ class Transcoder(metaclass=Singleton):
             "relation_properties": {"is_downloadset": True},
         }
         url = f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
-        headers = {"Accept": "text/uri-list", **headers}
+        headers = {"Accept": "text/uri-list", **self.__get_headers(headers)}
         req = requests.post(url, json=mediafile, headers=headers)
         if req.status_code not in (200, 201):
             req.raise_for_status()
