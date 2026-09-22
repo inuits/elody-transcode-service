@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 import app
 import requests
 from converter import Converter
+from elody.error_codes import ErrorCode, get_error_code, get_write
 from elody.exceptions import NotFoundException
 from elody.job import add_document_to_job, fail_job, start_job
 from elody.util import (
@@ -545,6 +546,22 @@ class Transcoder(metaclass=Singleton):
             raise GetWidthHeightException(mediafile)
         self.__patch_mediafile(mediafile, data, headers)
 
+    def __empty_zip_reason(self, considered_mediafile_ids):
+        """Why the zip ended up empty, as an elody error code plus fallback text.
+
+        The ' - ' separator is what the frontend splits on to recover the text
+        when a translation for the code is missing, so keep dashes out of it.
+        """
+        if not considered_mediafile_ids:
+            return (
+                f"{get_error_code(ErrorCode.NO_MEDIAFILES_TO_DOWNLOAD, get_write())} "
+                "- There are no mediafiles to download"
+            )
+        return (
+            f"{get_error_code(ErrorCode.NO_DOWNLOADABLE_MEDIAFILES, get_write())} "
+            "- None of the mediafiles has a downloadable file"
+        )
+
     def create_zip(self, request_body, headers=None, user_email=None, job_id=None):
         if download_entity_id := request_body.get("download_entity_id"):
             self.__set_download_entity_progress(
@@ -656,7 +673,11 @@ class Transcoder(metaclass=Singleton):
                     download_entity_id, "Failed", headers
                 )
                 if job_id:
-                    fail_job(job_id, "Nothing to zip", get_rabbit=get_rabbit)
+                    fail_job(
+                        job_id,
+                        self.__empty_zip_reason(object_ids["mediafiles"]),
+                        get_rabbit=get_rabbit,
+                    )
                 return
             if download_entity_id:
                 try:
