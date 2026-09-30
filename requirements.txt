@@ -1,4 +1,4 @@
-amqpstorm==2.11.1
+amqpstorm==3.1.4
 amqpstorm-flask==0.6.0-dev
 aniso8601==10.0.0
 Authlib==1.7.1
