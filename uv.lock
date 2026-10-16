@@ -217,18 +217,14 @@ wheels = [
 
 [[package]]
 name = "elody"
-version = "0.0.268"
-source = { registry = "https://pypi.org/simple" }
+version = "0.0.269"
+source = { git = "https://github.com/inuits/elody-python-sdk.git?rev=feat%2Fanalytics-observability#dc7355ad9e3cbfe077a5ff876fe08b8bf624b4d8" }
 dependencies = [
     { name = "certifi" },
     { name = "charset-normalizer" },
     { name = "idna" },
     { name = "requests" },
     { name = "urllib3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b7/81/ba2de59a2092608441163a205a44d85296ad4e71f584a9eaa50b01eceaff/elody-0.0.268.tar.gz", hash = "sha256:cacbad4c4e3b2eec3b9ee9db2eaefa3776ec9ed43a0ca9220b975ea8abfe145a", size = 54997, upload-time = "2026-09-22T08:35:21.954Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/8f/a47e89fc5025630fbd825bb381a978cf1b8798b1b41a6043d2aeba264b1d/elody-0.0.268-py3-none-any.whl", hash = "sha256:ec33da329401e202d257217962ed136af98926db38c78b1bdf87bf579e7fbb15", size = 69568, upload-time = "2026-09-22T08:35:20.54Z" },
 ]
 
 [package.optional-dependencies]
@@ -240,6 +236,14 @@ loader = [
     { name = "pytz" },
     { name = "six" },
     { name = "tzlocal" },
+]
+observability = [
+    { name = "flask" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-instrumentation-flask" },
+    { name = "opentelemetry-instrumentation-requests" },
+    { name = "opentelemetry-sdk" },
 ]
 
 [[package]]
@@ -259,7 +263,7 @@ dependencies = [
     { name = "cloudevents" },
     { name = "cryptography" },
     { name = "decorator" },
-    { name = "elody", extra = ["loader"] },
+    { name = "elody", extra = ["loader", "observability"] },
     { name = "flask" },
     { name = "flask-restful" },
     { name = "flask-swagger-ui" },
@@ -269,11 +273,6 @@ dependencies = [
     { name = "itsdangerous" },
     { name = "jinja2" },
     { name = "markupsafe" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp-proto-http" },
-    { name = "opentelemetry-instrumentation-flask" },
-    { name = "opentelemetry-instrumentation-requests" },
-    { name = "opentelemetry-sdk" },
     { name = "packaging" },
     { name = "pika" },
     { name = "pillow" },
@@ -314,7 +313,7 @@ requires-dist = [
     { name = "cloudevents", specifier = "==2.2.0" },
     { name = "cryptography", specifier = "==50.0.1" },
     { name = "decorator", specifier = "==5.2.1" },
-    { name = "elody", extras = ["loader"], specifier = "==0.0.268" },
+    { name = "elody", extras = ["loader", "observability"], git = "https://github.com/inuits/elody-python-sdk.git?rev=feat%2Fanalytics-observability" },
     { name = "flask", specifier = "==3.1.3" },
     { name = "flask-restful", specifier = "==0.3.10" },
     { name = "flask-swagger-ui", specifier = "==4.11.1" },
@@ -324,11 +323,6 @@ requires-dist = [
     { name = "itsdangerous", specifier = "==2.2.0" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "markupsafe", specifier = "==3.0.1" },
-    { name = "opentelemetry-api", specifier = "==1.44.0" },
-    { name = "opentelemetry-exporter-otlp-proto-http", specifier = "==1.44.0" },
-    { name = "opentelemetry-instrumentation-flask", specifier = "==0.65b0" },
-    { name = "opentelemetry-instrumentation-requests", specifier = "==0.65b0" },
-    { name = "opentelemetry-sdk", specifier = "==1.44.0" },
     { name = "packaging", specifier = "==24.1" },
     { name = "pika", specifier = "==1.3.2" },
     { name = "pillow", specifier = "==12.3.0" },
