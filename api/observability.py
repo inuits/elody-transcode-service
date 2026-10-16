@@ -12,8 +12,9 @@ service is named by OTEL_SERVICE_NAME.
 - logs: the root logger's records, each with its trace and span;
 - errors: an unexpected one is recorded on the request's span, so it is found
   next to the trace it broke; client errors are left out, as Sentry's filter did;
-- who: the pseudonymous user and library of the request (elody.* baggage, set by
-  the GraphQL server) are copied onto every span, also across RabbitMQ.
+- who: the pseudonymous user and library of the request and the browser tab's
+  session (elody.* baggage, set by the GraphQL server) are copied onto every
+  span, also across RabbitMQ.
 """
 
 import logging
@@ -96,13 +97,18 @@ def init_log_export(level: int = logging.INFO) -> bool:
     return True
 
 
+# a baggage entry that goes on the spans by another name: the browser tab's
+# session, named as the browser's own spans name it, so one search finds all
+_ATTRIBUTE_FOR_BAGGAGE = {"elody.session": "session_id"}
+
+
 class BaggageAttributes(SpanProcessor):
-    """Copies the elody.* baggage entries (user pseudonym, library) onto each span started."""
+    """Copies the elody.* baggage entries (user pseudonym, library, tab session) onto each span started."""
 
     def on_start(self, span, parent_context=None) -> None:
         for key, value in baggage.get_all(parent_context).items():
             if key.startswith("elody.") and isinstance(value, str):
-                span.set_attribute(key, value)
+                span.set_attribute(_ATTRIBUTE_FOR_BAGGAGE.get(key, key), value)
 
 
 def _add_baggage_attributes(provider) -> None:
