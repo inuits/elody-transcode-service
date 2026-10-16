@@ -11,7 +11,9 @@ service is named by OTEL_SERVICE_NAME.
 - metrics: the durations of those requests, in and out;
 - logs: the root logger's records, each with its trace and span;
 - errors: an unexpected one is recorded on the request's span, so it is found
-  next to the trace it broke; client errors are left out, as Sentry's filter did.
+  next to the trace it broke; client errors are left out, as Sentry's filter did;
+- who: the pseudonymous user and library of the request (elody.* baggage, set by
+  the GraphQL server) are copied onto every span, also across RabbitMQ.
 """
 
 import logging
@@ -19,7 +21,8 @@ from functools import wraps
 from os import environ
 from typing import Any, Mapping
 
-from opentelemetry import context, propagate, trace
+from opentelemetry import baggage, context, propagate, trace
+from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.trace import SpanKind, Status, StatusCode
 from werkzeug.exceptions import HTTPException, NotFound
 
@@ -93,16 +96,33 @@ def init_log_export(level: int = logging.INFO) -> bool:
     return True
 
 
+class BaggageAttributes(SpanProcessor):
+    """Copies the elody.* baggage entries (user pseudonym, library) onto each span started."""
+
+    def on_start(self, span, parent_context=None) -> None:
+        for key, value in baggage.get_all(parent_context).items():
+            if key.startswith("elody.") and isinstance(value, str):
+                span.set_attribute(key, value)
+
+
+def _add_baggage_attributes(provider) -> None:
+    if not getattr(provider, "_elody_baggage_attributes", False):
+        provider.add_span_processor(BaggageAttributes())
+        provider._elody_baggage_attributes = True
+
+
 def _init_traces() -> None:
     from opentelemetry.sdk.trace import TracerProvider
 
     # a service that sets up its own provider (collection-api's tracing.py) keeps it
     if isinstance(trace.get_tracer_provider(), TracerProvider):
+        _add_baggage_attributes(trace.get_tracer_provider())
         return
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
     provider = TracerProvider(resource=_resource())
+    _add_baggage_attributes(provider)
     provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
     trace.set_tracer_provider(provider)
 
