@@ -3,7 +3,8 @@ FROM python:3.13-alpine AS base-stage
 
 ENV FLASK_APP=app.py
 
-RUN apk update && apk add --no-cache ffmpeg git && adduser --disabled-password --home /app --shell /bin/bash app
+RUN apk update && apk add --no-cache ffmpeg git vips && adduser --disabled-password --home /app --shell /bin/bash app
+# RUN apk update && apk add --no-cache ffmpeg==9.0.2-r1 git==2.56.0-r0 vips==8.18.7-r0 && adduser --disabled-password --home /app --shell /bin/bash app
 USER app
 WORKDIR /app
 
