@@ -10,7 +10,7 @@ ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 ENV FLASK_APP=app.py
 
-RUN apk update && apk add --no-cache ffmpeg git && adduser --disabled-password --home /app --shell /bin/bash app
+RUN apk update && apk add --no-cache ffmpeg git vips && adduser --disabled-password --home /app --shell /bin/bash app
 
 USER app
 WORKDIR /app
