@@ -66,7 +66,10 @@ class PTIFFTranscoder(Transcoder, format_name="ptiff"):
     ):
         self.add_width_height(mediafile, Path(read_location), headers)
 
-        image = pyvips.Image.new_from_file(read_location)
+        try:
+            image = pyvips.Image.new_from_file(read_location, unlimited=True)
+        except pyvips.Error:
+            image = pyvips.Image.new_from_file(read_location)
 
         if image.format in ("ushort", "short", "uint", "int", "float", "double"):
             app.logger.warning(f"Normalizing high-depth mode: {image.format}")
