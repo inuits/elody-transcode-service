@@ -1,10 +1,15 @@
 ---
+stages:
+  - security
+
 include:
   - project: "inuits/gitlab-ci/pipeline-templates"
     ref: "v4.20.0"
     file:
       - "pipelines/customers/deploy.yml"
       - "jobs/docker/build-pip.yml"
+
+  - component: $CI_SERVER_FQDN/rnd/inuits/dams/ci-components/gitleaks@v0.0.3
 
 variables:
   CUSTOMER: "inuits"
