@@ -1,6 +1,9 @@
 ---
 stages:
+  - build
   - security
+  - deliver
+  - deploy
 
 include:
   - project: "inuits/gitlab-ci/pipeline-templates"
