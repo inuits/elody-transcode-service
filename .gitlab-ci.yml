@@ -3,6 +3,8 @@ stages:
   - build
   - security
   - dev
+  - uat
+  - prod
 
 include:
   - project: "inuits/gitlab-ci/pipeline-templates"
