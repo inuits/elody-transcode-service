@@ -79,6 +79,7 @@ include:
     inputs:
       image_name: ${IMAGE_NAME}
       destination_registry: ${BUILD_REGISTRY}
+      dockerfile_path: docker/uv.Dockerfile
       build_args:
         - UV_IMAGE_PREFIX=${UV_IMAGE_PREFIX}
       build_secrets:
