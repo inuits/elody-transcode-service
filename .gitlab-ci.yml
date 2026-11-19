@@ -72,12 +72,15 @@ variables:
   PYPI_PATH: /repository/python/simple
   PIP_INDEX_URL: "https://${PYPI_USERNAME}:${PYPI_PASSWORD}@${PYPI_HOST}${PYPI_PATH}"
   PIP_TRUSTED_HOST: "${PYPI_HOST}"
+  UV_IMAGE_PREFIX: kearblx6.c1.gra9.container-registry.ovh.net/ghcr
 
 include:
   - component: $CI_SERVER_FQDN/components/containers/build@v0.10.3
     inputs:
       image_name: ${IMAGE_NAME}
       destination_registry: ${BUILD_REGISTRY}
+      build_args:
+        - UV_IMAGE_PREFIX=${UV_IMAGE_PREFIX}
       build_secrets:
         - id=PIP_INDEX_URL,env=PIP_INDEX_URL
         - id=PIP_TRUSTED_HOST,env=PIP_TRUSTED_HOST
