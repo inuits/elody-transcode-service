@@ -13,7 +13,7 @@ dependencies = [
   "charset-normalizer==3.5.0",
   "click==8.5.0",
   "cloudevents==2.2.0",
-  "cryptography==50.0.1",
+  "cryptography==50.0.2",
   "decorator==5.2.1",
   "elody[loader,observability]==0.0.271",
   "flask==3.1.3",
