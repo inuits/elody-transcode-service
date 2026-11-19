@@ -27,13 +27,10 @@ ENTRYPOINT ["/entrypoint_uv.sh"]
 FROM base-stage AS development-stage
 
 ENV APP_ENV=dev
+COPY docker/pip.conf /etc
 
 
-RUN --mount=type=secret,id=PIP_INDEX_URL,uid=1000 \
-  --mount=type=secret,id=PIP_TRUSTED_HOST,uid=1000 \
-  export PIP_INDEX_URL="$(cat /run/secrets/PIP_INDEX_URL)" \
-  PIP_TRUSTED_HOST="$(cat /run/secrets/PIP_TRUSTED_HOST)" && \
-  uv venv && uv pip install --no-cache-dir -r requirements.txt -r requirements_dev.txt
+RUN uv venv && uv pip install --no-cache-dir -r requirements.txt -r requirements_dev.txt
 
 EXPOSE 5000
 
