@@ -1,59 +1,102 @@
+# include:
+#   - project: "inuits/gitlab-ci/pipeline-templates"
+#     ref: "v4.20.0"
+#     file:
+#       - "pipelines/customers/deploy.yml"
+#       - "jobs/docker/build-pip.yml"
+#
+#   - component: $CI_SERVER_FQDN/rnd/inuits/dams/ci-components/gitleaks@v0.0.3
+#
+# variables:
+#   CUSTOMER: "inuits"
+#   PROJECT: "dams"
+#   APPLICATION: "base-transcoder"
+#
+#   SKIP_DEPLOY: "true"
+#
+#   HARBOR_PROJECT_DEV: elody-dams-dev
+#   TARGET_CLUSTER_DEV: inuits-prod
+#   UV_IMAGE_PREFIX: kearblx6.c1.gra9.container-registry.ovh.net/ghcr
+#
+# # customers:
+# #   parallel:
+# #     matrix:
+# #       - CUSTOMER:
+# #           - coghent
+# #           - digipolis
+# #           - vliz
+# #           - imec
+#
+# .build:
+#   variables:
+#     DOCKER_EXTRA_BUILD_FLAGS: --build-arg UV_IMAGE_PREFIX=${UV_IMAGE_PREFIX}
+#
+# build:
+#   variables:
+#     DOCKERFILE: docker/uv.Dockerfile
+#   rules:
+#     - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
+#       when: always
+#     - if: "$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH"
+#       when: manual
+#
+# # Disable uat, not needed
+# uat:
+#   rules:
+#     - when: never
+#
+# # Disable prod, not needed
+# prod:
+#   rules:
+#     - when: never
+#
+
 ---
 stages:
   - build
   - security
-  - dev
-  - uat
-  - prod
+  - deliver
+
+deliver:
+  needs:
+    - security:gitleaks
+    - build
+
+variables:
+  IMAGE_NAME: dams-base-transcoder
+  HARBOR_PROJECT_PREFIX: elody-dams-dev
+  BUILD_REGISTRY: ${HARBOR_URL}/build/${HARBOR_PROJECT_PREFIX}
+  DESTINATION_REGISTRY: ${HARBOR_URL}/${HARBOR_PROJECT_PREFIX}/inuits
+
+  PYPI_HOST: nexus.inuits.eu
+  PYPI_PATH: /repository/python/simple
+  PIP_INDEX_URL: "https://${PYPI_USERNAME}:${PYPI_PASSWORD}@${PYPI_HOST}${PYPI_PATH}"
+  PIP_TRUSTED_HOST: "${PYPI_HOST}"
 
 include:
-  - project: "inuits/gitlab-ci/pipeline-templates"
-    ref: "v4.20.0"
-    file:
-      - "pipelines/customers/deploy.yml"
-      - "jobs/docker/build-pip.yml"
+  - component: $CI_SERVER_FQDN/components/containers/build@v0.10.3
+    inputs:
+      image_name: ${IMAGE_NAME}
+      destination_registry: ${BUILD_REGISTRY}
+      build_secrets:
+        - id=PIP_INDEX_URL,env=PIP_INDEX_URL
+        - id=PIP_TRUSTED_HOST,env=PIP_TRUSTED_HOST
+
+  - component: $CI_SERVER_FQDN/components/containers/deliver@v0.10.3
+    inputs:
+      image_name: ${IMAGE_NAME}
+      source_registry: ${BUILD_REGISTRY}
+      destination_registries:
+        - ${DESTINATION_REGISTRY}
+      rules:
+        - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
   - component: $CI_SERVER_FQDN/rnd/inuits/dams/ci-components/gitleaks@v0.0.3
 
-variables:
-  CUSTOMER: "inuits"
-  PROJECT: "dams"
-  APPLICATION: "base-transcoder"
-
-  SKIP_DEPLOY: "true"
-
-  HARBOR_PROJECT_DEV: elody-dams-dev
-  TARGET_CLUSTER_DEV: inuits-prod
-  UV_IMAGE_PREFIX: kearblx6.c1.gra9.container-registry.ovh.net/ghcr
-
-# customers:
-#   parallel:
-#     matrix:
-#       - CUSTOMER:
-#           - coghent
-#           - digipolis
-#           - vliz
-#           - imec
-
-.build:
-  variables:
-    DOCKER_EXTRA_BUILD_FLAGS: --build-arg UV_IMAGE_PREFIX=${UV_IMAGE_PREFIX}
-
+# Only run pipeline for default branch, otherwise require manual approval
 build:
-  variables:
-    DOCKERFILE: docker/uv.Dockerfile
   rules:
     - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
       when: always
     - if: "$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH"
       when: manual
-
-# Disable uat, not needed
-uat:
-  rules:
-    - when: never
-
-# Disable prod, not needed
-prod:
-  rules:
-    - when: never
