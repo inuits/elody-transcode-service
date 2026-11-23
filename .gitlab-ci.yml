@@ -1,53 +1,24 @@
 ---
-stages:
-  - build
-  - security
-  - deliver
-
-deliver:
-  needs:
-    - security:gitleaks
-    - build
-
 variables:
-  IMAGE_NAME: dams-base-transcoder
-  HARBOR_PROJECT_PREFIX: elody-dams-dev
-  BUILD_REGISTRY: ${HARBOR_URL}/build/${HARBOR_PROJECT_PREFIX}
-  DESTINATION_REGISTRY: ${HARBOR_URL}/${HARBOR_PROJECT_PREFIX}/inuits
-
-  PYPI_HOST: nexus.inuits.eu
-  PYPI_PATH: /repository/python/simple
-  PIP_INDEX_URL: "https://${PYPI_USERNAME}:${PYPI_PASSWORD}@${PYPI_HOST}${PYPI_PATH}"
-  PIP_TRUSTED_HOST: "${PYPI_HOST}"
   UV_IMAGE_PREFIX: kearblx6.c1.gra9.container-registry.ovh.net/ghcr
+  IMAGE_NAME: dams-base-transcoder
 
 include:
-  - component: $CI_SERVER_FQDN/components/containers/build@v0.10.3
+  - component: $CI_SERVER_FQDN/rnd/inuits/dams/ci-components/build-security-deliver@v0.0.7
     inputs:
       image_name: ${IMAGE_NAME}
-      destination_registry: ${BUILD_REGISTRY}
       dockerfile_path: docker/uv.Dockerfile
       build_args:
         - UV_IMAGE_PREFIX=${UV_IMAGE_PREFIX}
-      build_secrets:
-        - id=PIP_INDEX_URL,env=PIP_INDEX_URL
-        - id=PIP_TRUSTED_HOST,env=PIP_TRUSTED_HOST
 
-  - component: $CI_SERVER_FQDN/components/containers/deliver@v0.10.3
+  - component: $CI_SERVER_FQDN/rnd/inuits/dams/ci-components/deliver-customers@v0.0.7
     inputs:
       image_name: ${IMAGE_NAME}
-      source_registry: ${BUILD_REGISTRY}
-      destination_registries:
-        - ${DESTINATION_REGISTRY}
-      rules:
-        - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-
-  - component: $CI_SERVER_FQDN/rnd/inuits/dams/ci-components/gitleaks@v0.0.3
-
-# Only run pipeline for default branch, otherwise require manual approval
-build:
-  rules:
-    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
-      when: always
-    - if: "$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH"
-      when: manual
+      values_key: .base-transcoder
+      customers:
+        - CUSTOMER: digipolis-damsv2
+          VALUES_REPO: customers/digipolis/dams-v2/digipolis-dams-v2-helm-values
+        - CUSTOMER: vliz-dams
+          VALUES_REPO: customers/vliz/dams/vliz-dams-elody-helm-values
+        - CUSTOMER: cultuurconnect-podiumnet
+          VALUES_REPO: customers/cultuur-connect/podiumnet/cultuur-connect-podiumnet-elody-helm-values
