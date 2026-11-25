@@ -1,5 +1,6 @@
 import os
 import posixpath
+import random
 import shutil
 import tempfile
 import time
@@ -37,6 +38,11 @@ from storage.base_storage import StorageService
 from urllib3.exceptions import IncompleteRead, ProtocolError
 
 Image.MAX_IMAGE_PIXELS = None
+
+CONFLICT_RETRY_ATTEMPTS = 4
+CONFLICT_RETRY_DELAYS = (0.25, 0.5, 1.0)
+CONFLICT_RETRY_JITTER = 0.1
+OPTIMISTIC_CONCURRENCY_MESSAGE = "Optimistic concurrency failure"
 
 
 class Singleton(type):
@@ -391,7 +397,9 @@ class Transcoder(metaclass=Singleton):
         }
         url = f"{self.collection_api_url}/entities/{entity_id}/mediafiles"
         headers = {"Accept": "text/uri-list", **self.__get_headers(headers)}
-        req = requests.post(url, json=mediafile, headers=headers)
+        req = self.__send_with_conflict_retry(
+            "POST", url, json=mediafile, headers=headers
+        )
         if req.status_code not in (200, 201):
             req.raise_for_status()
         upload_url = req.text.strip().replace('"', "")
@@ -400,13 +408,39 @@ class Transcoder(metaclass=Singleton):
         )
 
     def __patch_mediafile(self, mediafile, payload, headers):
-        req = requests.patch(
+        req = self.__send_with_conflict_retry(
+            "PATCH",
             f"{self.collection_api_url}/mediafiles/{get_raw_id(mediafile)}",
             json=payload,
             headers=self.__get_headers(headers),
         )
         if req.status_code not in (200, 201, 204):
             req.raise_for_status()
+
+    def __send_with_conflict_retry(self, method, url, **kwargs):
+        """Send a request to the collection-api, retrying on optimistic concurrency conflicts.
+
+        Only a 409 whose body reports an optimistic concurrency failure is retried;
+        other 409s are semantic and returned as-is. Returns the last response
+        without raising, so every caller keeps its own error handling.
+        """
+        req = None
+        for attempt in range(1, CONFLICT_RETRY_ATTEMPTS + 1):
+            req = requests.request(method, url, **kwargs)
+            if (
+                req.status_code != 409
+                or OPTIMISTIC_CONCURRENCY_MESSAGE not in req.text
+                or attempt == CONFLICT_RETRY_ATTEMPTS
+            ):
+                return req
+            app.logger.warning(
+                f"Concurrency conflict on {method} {url}, retrying (attempt {attempt}/{CONFLICT_RETRY_ATTEMPTS})"
+            )
+            time.sleep(
+                CONFLICT_RETRY_DELAYS[attempt - 1]
+                + random.uniform(0, CONFLICT_RETRY_JITTER)
+            )
+        return req
 
     def __set_download_entity_progress(
         self,
@@ -420,7 +454,8 @@ class Transcoder(metaclass=Singleton):
                 "value": progress,
             },
         ]
-        req = requests.patch(
+        req = self.__send_with_conflict_retry(
+            "PATCH",
             f"{self.collection_api_url}/entities/{download_entity_id}/metadata",
             json=payload,
             headers=self.__get_headers(headers),
@@ -447,7 +482,8 @@ class Transcoder(metaclass=Singleton):
         upload_link = req.text.strip()
         if master_entity_id:
             mediafile_id = parse_qs(urlparse(upload_link).query).get("id", [])[0]
-            req = requests.post(
+            req = self.__send_with_conflict_retry(
+                "POST",
                 f"{self.collection_api_url}/entities/{master_entity_id}/relations",
                 json=[{"key": mediafile_id, "type": "hasMediafile"}],
                 headers=self.__get_headers(headers),
