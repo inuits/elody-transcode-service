@@ -4,14 +4,14 @@ variables:
   IMAGE_NAME: dams-base-transcoder
 
 include:
-  - component: $CI_SERVER_FQDN/rnd/inuits/dams/ci-components/build-security-deliver@v0.0.7
+  - component: $CI_SERVER_FQDN/rnd/inuits/dams/ci-components/build-security-deliver@v0.0.10
     inputs:
       image_name: ${IMAGE_NAME}
       dockerfile_path: docker/uv.Dockerfile
       build_args:
         - UV_IMAGE_PREFIX=${UV_IMAGE_PREFIX}
 
-  - component: $CI_SERVER_FQDN/rnd/inuits/dams/ci-components/deliver-customers@v0.0.7
+  - component: $CI_SERVER_FQDN/rnd/inuits/dams/ci-components/deliver-customers@v0.0.10
     inputs:
       image_name: ${IMAGE_NAME}
       values_key: .base-transcoder
